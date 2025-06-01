@@ -158,28 +158,41 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Sayfa bulunamadı' });
 });
 
-// Sunucuyu başlat
-async function startServer() {
+// Veritabanını başlat (Vercel için)
+async function initializeDatabase() {
   try {
-    // Veritabanını başlat
     await initDatabase();
     await insertDefaultData();
     await insertDefaultEmailTemplates();
-    
     console.log('Veritabanı hazırlandı');
-    
-    // Sunucuyu başlat
-    app.listen(PORT, () => {
-      console.log(`🚀 Sunucu http://localhost:${PORT} adresinde çalışıyor`);
-      console.log(`📧 Mail servisi aktif`);
-      console.log(`⏰ Cron servisi aktif - Günlük kontroller saat 12:00'da çalışacak`);
-      console.log(`🏢 Şirket: ${process.env.COMPANY_NAME || 'Marka World'}`);
-    });
-    
   } catch (error) {
-    console.error('Sunucu başlatma hatası:', error);
-    process.exit(1);
+    console.error('Veritabanı başlatma hatası:', error);
   }
 }
 
-startServer(); 
+// Vercel için
+if (process.env.VERCEL) {
+  initializeDatabase();
+} else {
+  // Local development için sunucuyu başlat
+  async function startServer() {
+    try {
+      await initializeDatabase();
+      
+      app.listen(PORT, () => {
+        console.log(`🚀 Sunucu http://localhost:${PORT} adresinde çalışıyor`);
+        console.log(`📧 Mail servisi aktif`);
+        console.log(`⏰ Cron servisi aktif - Günlük kontroller saat 12:00'da çalışacak`);
+        console.log(`🏢 Şirket: ${process.env.COMPANY_NAME || 'Marka World'}`);
+      });
+      
+    } catch (error) {
+      console.error('Sunucu başlatma hatası:', error);
+      process.exit(1);
+    }
+  }
+  
+  startServer();
+}
+
+module.exports = app; 
