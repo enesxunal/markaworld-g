@@ -9,11 +9,18 @@ class EmailService {
 
   initTransporter() {
     this.transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'fr-astral.guzelhosting.com', // Doğru hosting sunucusu
+      port: 465, // SSL portu
+      secure: true, // SSL kullan
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
+        user: 'info@markaworld.com.tr',
+        pass: 'w0;d;JiZ8a,v' // Mail hesabının şifresi
+      },
+      tls: {
+        rejectUnauthorized: false
+      },
+      debug: true, // Debug modunu aç
+      logger: true // Log'ları göster
     });
   }
 
@@ -55,7 +62,7 @@ class EmailService {
       const template = await this.getTemplate(templateName, variables);
       
       const mailOptions = {
-        from: `"${process.env.COMPANY_NAME || 'Marka World'}" <${process.env.SMTP_USER}>`,
+        from: '"Marka World" <info@markaworld.com.tr>',
         to: to,
         subject: template.subject,
         html: template.html

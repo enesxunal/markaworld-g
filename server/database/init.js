@@ -299,6 +299,22 @@ db.run(`
   UPDATE customers SET password = ?, email_verified = 1 WHERE id = 1 AND password IS NULL
 `, [testPassword]);
 
+// İkinci test kullanıcısı ekle
+const test2Password = bcrypt.hashSync('123456', 10);
+
+db.run(`
+  INSERT OR IGNORE INTO customers (id, name, tc_no, phone, email, address, credit_limit, status, email_verified, password)
+  VALUES (2, 'Test Müşteri 2', '98765432109', '05559876543', 'test2@example.com', 'Test Adres 2', 7500, 'active', 1, ?)
+`, [test2Password]);
+
+// Üçüncü test kullanıcısı ekle - basit şifre
+const test3Password = bcrypt.hashSync('test123', 10);
+
+db.run(`
+  INSERT OR IGNORE INTO customers (id, name, tc_no, phone, email, address, credit_limit, status, email_verified, password)
+  VALUES (3, 'Ahmet Yılmaz', '11122233344', '05551112233', 'ahmet@test.com', 'İstanbul Test Mahallesi', 10000, 'active', 1, ?)
+`, [test3Password]);
+
 // Test satışı ekle
 db.run(`
   INSERT OR IGNORE INTO sales (id, customer_id, total_amount, installment_count, interest_rate, total_with_interest, installment_amount, first_payment_date, status, approval_token)

@@ -10,6 +10,7 @@ const cronService = require('./services/cronService');
 // Rotalar
 const customersRouter = require('./routes/customers');
 const salesRouter = require('./routes/sales');
+const emailRouter = require('./routes/email');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 // API rotaları
 app.use('/api/customers', customersRouter);
 app.use('/api/sales', salesRouter);
+app.use('/api/email', emailRouter);
 
 // Sistem durumu
 app.get('/api/health', (req, res) => {
