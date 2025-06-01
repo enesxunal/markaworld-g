@@ -1,5 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const bcrypt = require('bcrypt');
 
 const dbPath = path.join(__dirname, 'database.sqlite');
 const db = new sqlite3.Database(dbPath);
@@ -286,10 +287,17 @@ const insertDefaultEmailTemplates = () => {
 };
 
 // Test müşterisi ekle
+const testPassword = bcrypt.hashSync('123456', 10);
+
 db.run(`
-  INSERT OR IGNORE INTO customers (id, name, tc_no, phone, email, address, credit_limit, status)
-  VALUES (1, 'Test Müşteri', '12345678901', '05551234567', 'test@example.com', 'Test Adres', 5000, 'active')
-`);
+  INSERT OR IGNORE INTO customers (id, name, tc_no, phone, email, address, credit_limit, status, email_verified, password)
+  VALUES (1, 'Test Müşteri', '12345678901', '05551234567', 'test@example.com', 'Test Adres', 5000, 'active', 1, ?)
+`, [testPassword]);
+
+// Eğer test kullanıcısı zaten varsa şifresini güncelle
+db.run(`
+  UPDATE customers SET password = ?, email_verified = 1 WHERE id = 1 AND password IS NULL
+`, [testPassword]);
 
 // Test satışı ekle
 db.run(`
@@ -313,4 +321,4 @@ module.exports = {
   initDatabase,
   insertDefaultData,
   insertDefaultEmailTemplates
-}; 
+};
