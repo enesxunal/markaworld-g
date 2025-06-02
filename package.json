@@ -4,13 +4,13 @@
   "description": "Giyim mağazası için müşteri ödeme takip sistemi",
   "main": "server/index.js",
   "scripts": {
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "dev": "cd client && npm start",
     "server": "cd server && npm run dev",
     "client": "cd client && npm start",
     "build": "cd client && npm run build",
-    "vercel-build": "cd client && npm install && npm run build",
+    "vercel-build": "cd client && npm install && CI=false npm run build",
     "start": "cd server && npm start",
-    "install-all": "npm install && cd server && npm install && cd ../client && npm install"
+    "install-deps": "npm install && cd client && npm install && cd ../server && npm install"
   },
   "keywords": ["müşteri", "ödeme", "takip", "taksit"],
   "author": "Marka World",
