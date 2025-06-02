@@ -10,7 +10,7 @@ Giyim mağazası için geliştirilmiş profesyonel müşteri ödeme takip sistem
 - Admin ve müşteri paneli çalışır durumda
 - Email sistemi aktif
 
-**Vercel URL:** [https://markaworld.vercel.app](https://markaworld.vercel.app)
+**Vercel URL:** [https://markaworld.vercel.app](https://markaworld.vercel.app) ✅
 
 **Admin Giriş:**
 - Kullanıcı: `markaworld`
