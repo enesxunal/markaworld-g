@@ -302,6 +302,7 @@ const CustomerRegister = () => {
                 onChange={handleChange}
                 error={!!errors.password}
                 helperText={errors.password}
+                autoComplete="new-password"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -326,6 +327,7 @@ const CustomerRegister = () => {
                 onChange={handleChange}
                 error={!!errors.confirmPassword}
                 helperText={errors.confirmPassword}
+                autoComplete="new-password"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">

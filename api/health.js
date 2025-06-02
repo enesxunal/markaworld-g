@@ -1,4 +1,4 @@
-module.exports = (req, res) => {
+image.pngmodule.exports = (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'Müşteri Ödeme Takip Sistemi çalışıyor',
