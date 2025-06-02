@@ -1,14 +1,15 @@
 {
   "name": "marka-world-backend",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Marka World Backend API - Müşteri ödeme takip sistemi",
   "main": "server/index.js",
+  "type": "commonjs",
   "scripts": {
     "start": "cd server && node index.js",
     "dev": "cd server && nodemon index.js",
     "install-deps": "cd server && npm install",
-    "build": "echo 'No build needed for backend'",
-    "vercel-build": "echo 'Backend ready for Vercel'",
+    "build": "echo 'Backend - No build step required'",
+    "vercel-build": "echo 'Backend successfully prepared for Vercel'",
     "test": "echo 'No tests specified'"
   },
   "keywords": [
