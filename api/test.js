@@ -1,9 +1,8 @@
 export default function handler(req, res) {
   res.status(200).json({
-    status: 'OK',
-    message: 'Marka World - Müşteri Ödeme Takip Sistemi',
+    message: 'Vercel API Test Başarılı',
     timestamp: new Date().toISOString(),
     method: req.method,
-    path: req.url
+    query: req.query
   });
 } 

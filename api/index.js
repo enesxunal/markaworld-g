@@ -66,7 +66,25 @@ async function initializeDatabase() {
 }
 
 // Vercel serverless fonksiyonu
-module.exports = async (req, res) => {
-  await initializeDatabase();
-  return app(req, res);
-}; 
+export default function handler(req, res) {
+  if (req.method === 'GET') {
+    res.status(200).json({
+      message: 'Marka World API',
+      version: '1.0.0',
+      endpoints: [
+        '/api/health',
+        '/api/test',
+        '/api/admin',
+        '/api/customers',
+        '/api/sales',
+        '/api/email'
+      ],
+      timestamp: new Date().toISOString()
+    });
+  } else {
+    res.status(405).json({ 
+      error: 'Method not allowed',
+      allowedMethods: ['GET']
+    });
+  }
+} 
