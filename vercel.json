@@ -1,5 +1,27 @@
 {
-  "version": 2,
+  "functions": {
+    "api/hello.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/health.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/test.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/admin.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/customers.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/sales.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/email.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "builds": [
     {
       "src": "client/package.json",
@@ -7,20 +29,12 @@
       "config": {
         "distDir": "build"
       }
-    },
-    {
-      "src": "api/*.js",
-      "use": "@vercel/node"
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/client/build/$1"
+      "source": "/((?!api).*)",
+      "destination": "/client/build/$1"
     }
   ]
 } 
