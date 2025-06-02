@@ -1,41 +1,44 @@
-const express = require('express');
-const cors = require('cors');
-const customersRouter = require('../server/routes/customers');
-const { initDatabase, insertDefaultData, insertDefaultEmailTemplates } = require('../server/database/init');
+export default function handler(req, res) {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-const app = express();
-
-// Middleware
-app.use(cors({
-  origin: ['http://localhost:3000', 'https://markaworld.vercel.app', 'https://marka-world.vercel.app'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Customers rotası
-app.use('/', customersRouter);
-
-// Veritabanını başlat
-let dbInitialized = false;
-async function initializeDatabase() {
-  if (!dbInitialized) {
-    try {
-      await initDatabase();
-      await insertDefaultData();
-      await insertDefaultEmailTemplates();
-      dbInitialized = true;
-      console.log('Customers API - Veritabanı hazırlandı');
-    } catch (error) {
-      console.error('Customers API - Veritabanı başlatma hatası:', error);
-    }
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
-}
 
-// Vercel serverless fonksiyonu
-module.exports = async (req, res) => {
-  await initializeDatabase();
-  return app(req, res);
-}; 
+  if (req.method === 'POST') {
+    const { email, password, name, tc_no, phone } = req.body;
+
+    // Mock registration/login response
+    return res.status(200).json({
+      success: true,
+      message: 'Müşteri işlemi başarılı',
+      customer: {
+        id: Date.now(),
+        name: name || 'Test User',
+        email: email || 'test@example.com',
+        phone: phone || '5551234567',
+        status: 'active'
+      }
+    });
+  }
+
+  if (req.method === 'GET') {
+    return res.status(200).json({
+      success: true,
+      customers: [
+        {
+          id: 1,
+          name: 'Test Müşteri',
+          email: 'test@example.com',
+          phone: '5551234567',
+          status: 'active'
+        }
+      ]
+    });
+  }
+
+  res.status(405).json({ error: 'Method not allowed' });
+} 

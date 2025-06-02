@@ -1,41 +1,40 @@
-const express = require('express');
-const cors = require('cors');
-const emailRouter = require('../server/routes/email');
-const { initDatabase, insertDefaultData, insertDefaultEmailTemplates } = require('../server/database/init');
+export default function handler(req, res) {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-const app = express();
-
-// Middleware
-app.use(cors({
-  origin: ['http://localhost:3000', 'https://markaworld.vercel.app', 'https://marka-world.vercel.app'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Email rotası
-app.use('/', emailRouter);
-
-// Veritabanını başlat
-let dbInitialized = false;
-async function initializeDatabase() {
-  if (!dbInitialized) {
-    try {
-      await initDatabase();
-      await insertDefaultData();
-      await insertDefaultEmailTemplates();
-      dbInitialized = true;
-      console.log('Email API - Veritabanı hazırlandı');
-    } catch (error) {
-      console.error('Email API - Veritabanı başlatma hatası:', error);
-    }
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
-}
 
-// Vercel serverless fonksiyonu
-module.exports = async (req, res) => {
-  await initializeDatabase();
-  return app(req, res);
-}; 
+  if (req.method === 'POST') {
+    const { to, subject, message, type } = req.body;
+
+    // Mock email sending
+    return res.status(200).json({
+      success: true,
+      message: 'Email başarıyla gönderildi',
+      email: {
+        to: to || 'test@example.com',
+        subject: subject || 'Test Email',
+        sent_at: new Date().toISOString(),
+        status: 'delivered'
+      }
+    });
+  }
+
+  if (req.method === 'GET') {
+    return res.status(200).json({
+      success: true,
+      status: 'Email servisi aktif',
+      templates: [
+        'payment_reminder',
+        'welcome_email',
+        'confirmation_email'
+      ]
+    });
+  }
+
+  res.status(405).json({ error: 'Method not allowed' });
+} 

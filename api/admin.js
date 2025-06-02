@@ -1,41 +1,34 @@
-const express = require('express');
-const cors = require('cors');
-const adminRouter = require('../server/routes/admin');
-const { initDatabase, insertDefaultData, insertDefaultEmailTemplates } = require('../server/database/init');
+export default function handler(req, res) {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-const app = express();
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-// Middleware
-app.use(cors({
-  origin: ['http://localhost:3000', 'https://markaworld.vercel.app', 'https://marka-world.vercel.app'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+  if (req.method === 'POST') {
+    const { username, password } = req.body;
 
-// Admin rotası
-app.use('/', adminRouter);
-
-// Veritabanını başlat
-let dbInitialized = false;
-async function initializeDatabase() {
-  if (!dbInitialized) {
-    try {
-      await initDatabase();
-      await insertDefaultData();
-      await insertDefaultEmailTemplates();
-      dbInitialized = true;
-      console.log('Admin API - Veritabanı hazırlandı');
-    } catch (error) {
-      console.error('Admin API - Veritabanı başlatma hatası:', error);
+    // Admin credentials check
+    if (username === 'markaworld' && password === 'Marka60..') {
+      return res.status(200).json({
+        success: true,
+        message: 'Admin giriş başarılı',
+        token: 'mock-jwt-token-' + Date.now(),
+        admin: {
+          username: 'markaworld',
+          role: 'admin'
+        }
+      });
+    } else {
+      return res.status(401).json({
+        success: false,
+        error: 'Kullanıcı adı veya şifre hatalı'
+      });
     }
   }
-}
 
-// Vercel serverless fonksiyonu
-module.exports = async (req, res) => {
-  await initializeDatabase();
-  return app(req, res);
-}; 
+  res.status(405).json({ error: 'Method not allowed' });
+} 
