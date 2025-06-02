@@ -1,292 +1,220 @@
-# 🏪 Müşteri Ödeme Takip Sistemi - Marka World
+# Marka World - Müşteri Ödeme Takip Sistemi
 
-Giyim mağazaları için geliştirilmiş, taksitli satış ve müşteri ödeme takip sistemi. Modern siyah-beyaz tasarım ile müşteri ve admin panelleri.
+Giyim mağazaları için geliştirilmiş modern müşteri ödeme takip ve taksitli satış yönetim sistemi.
 
-## 🎯 Özellikler
+## 🚀 Özellikler
 
-### ✅ Müşteri Paneli
-- **Müşteri Kayıt Sistemi**: Kendi kendine kayıt olma
-- **Email Onay Sistemi**: Hesap aktivasyonu için email onayı
-- **Güvenli Giriş**: TC Kimlik No + Telefon ile giriş
-- **Kişisel Profil**: Müşteri bilgileri ve kredi limiti görüntüleme
-- **Taksit Takibi**: Ödenen (✅), bekleyen (⚠️) ve geciken (❌) taksitler
-- **Ödeme Bilgileri**: Şirket IBAN ve ödeme talimatları
-- **Alışveriş Geçmişi**: Tüm satış kayıtları
+### 👥 Müşteri Yönetimi
+- Müşteri kayıt ve giriş sistemi
+- Email onay sistemi
+- 3 aşamalı sözleşme onay süreci (KVKK, Taksitli Satış, Elektronik Onay)
+- Kredi limit yönetimi
+- Müşteri profil sayfası
 
-### ✅ Admin Paneli
-- **Müşteri Yönetimi**: CRUD işlemleri, arama ve filtreleme
-- **Taksitli Satış Sistemi**: 3 taksit (%5 faiz) veya 5 taksit (%10 faiz)
-- **Email Onay Sistemi**: Otomatik müşteri onayı
-- **Ödeme Takibi**: Manuel ödeme kaydı ve durum güncellemeleri
-- **Dashboard**: İstatistikler ve özet bilgiler
+### 💳 Satış ve Taksit Yönetimi
+- Taksitli satış oluşturma (3 ve 5 taksit)
+- Otomatik taksit hesaplama
+- Email ile satış onay sistemi
+- Taksit ödeme takibi
+- Gecikme bildirimleri
 
-### ✅ Otomatik Email Sistemi
-- **Kayıt Onay Emaili**: Hesap aktivasyonu için
-- **Günlük Kontroller**: Saat 12:00'da otomatik çalışma
-- **Ödeme Hatırlatmaları**: 3 gün önceden uyarı
-- **Gecikme Bildirimleri**: Vade geçen ödemeler için uyarı
-- **HTML Email Şablonları**: Profesyonel görünüm
+### 📧 Email Sistemi
+- Otomatik email bildirimleri
+- Kayıt onay emaili
+- Satış onay emaili
+- Hesap aktivasyon emaili
+- Ödeme hatırlatma emaili
 
-### ✅ Modern Tasarım
-- **Siyah-Beyaz Tema**: Şık ve profesyonel görünüm
-- **Responsive Design**: Mobil ve masaüstü uyumlu
-- **Material-UI**: Modern bileşenler
-- **Logo Entegrasyonu**: Marka kimliği
-- **Step-by-Step Kayıt**: Kullanıcı dostu kayıt süreci
+### 🔐 Admin Paneli
+- Güvenli admin girişi (JWT token)
+- Müşteri yönetimi
+- Satış yönetimi
+- Sistem durumu takibi
 
-## 🚀 Kurulum ve Çalıştırma
+### ⏰ Otomatik Sistemler
+- Günlük ödeme kontrolleri
+- Otomatik email bildirimleri
+- Cron job sistemi
 
-### Gereksinimler
-- Node.js (v14 veya üzeri)
-- NPM
-- Gmail hesabı (email için)
-
-### 1. Bağımlılıkları Yükleyin
-```bash
-# Ana proje
-npm install
-
-# Backend
-cd server
-npm install
-
-# Frontend
-cd ../client
-npm install
-```
-
-### 2. Email Ayarlarını Yapın
-`server/.env` dosyasını oluşturun:
-```env
-SMTP_USER=sizin-email@gmail.com
-SMTP_PASS=sizin-uygulama-şifreniz
-COMPANY_NAME=MARKA WORLD GİYİM LTD. ŞTİ.
-FRONTEND_URL=http://localhost:3000
-```
-
-**Gmail Uygulama Şifresi Alma:**
-1. Gmail hesabınızda 2 faktörlü doğrulama açın
-2. Google hesap ayarları → Güvenlik → Uygulama şifreleri
-3. Yeni uygulama şifresi oluşturun
-
-### 3. Sunucuları Başlatın
-
-**Tek Komutla (Önerilen):**
-```bash
-npm start
-```
-
-**Veya Ayrı Ayrı:**
-```bash
-# Backend (Terminal 1)
-cd server
-node index.js
-
-# Frontend (Terminal 2)
-cd client
-npm start
-```
-
-## 🌐 Erişim Adresleri
-
-- **Müşteri Paneli**: http://localhost:3000 (Ana sayfa)
-- **Admin Paneli**: http://localhost:3000/admin
-- **Backend API**: http://localhost:5000
-
-## 📱 Kullanım Kılavuzu
-
-### Müşteri Kayıt ve Giriş Süreci
-
-#### Yeni Müşteri Kaydı
-1. Ana sayfada (http://localhost:3000) "Yeni Hesap Oluştur" butonuna tıklayın
-2. **Adım 1 - Kişisel Bilgiler**:
-   - Ad Soyad (zorunlu)
-   - TC Kimlik No (zorunlu, 11 hane)
-   - Telefon (zorunlu)
-   - Doğum Tarihi (isteğe bağlı)
-3. **Adım 2 - İletişim Bilgileri**:
-   - Email Adresi (zorunlu, onay için)
-   - Adres (isteğe bağlı)
-4. "Hesap Oluştur" butonuna tıklayın
-5. Email adresinize gelen onay linkine tıklayın
-6. Hesabınız aktifleştirilir (5.000₺ kredi limiti)
-
-#### Müşteri Girişi
-1. Ana sayfada TC Kimlik No ve telefon numaranızı girin
-2. Giriş yaptıktan sonra kişisel panel açılır
-
-#### Müşteri Paneli Özellikleri
-- **Kişisel Bilgiler**: Ad, TC, telefon, email, adres, kredi limiti
-- **Ödeme Bilgileri**: Şirket IBAN, banka bilgileri, ödeme talimatları
-- **Taksit Tablosu**: 
-  - ✅ Yeşil: Ödenen taksitler
-  - ⚠️ Sarı: Bekleyen taksitler  
-  - ❌ Kırmızı: Geciken taksitler
-- **Alışveriş Geçmişi**: Tüm satış kayıtları
-
-### Admin Paneli Kullanımı
-
-#### Erişim
-- Müşteri panelinde sağ üstteki "Admin Panel" butonuna tıklayın
-- Veya direkt http://localhost:3000/admin adresine gidin
-
-#### Admin Özellikleri
-1. **Dashboard**: Genel istatistikler ve özet
-2. **Müşteriler**: Müşteri listesi, ekleme, düzenleme
-3. **Satışlar**: Satış listesi ve detayları
-4. **Yeni Satış**: Taksitli satış oluşturma
-
-### Taksitli Satış Süreci
-1. Admin panelinde "Yeni Satış" seçin
-2. Müşteri seçin (aktif müşteri listesinden)
-3. Satış tutarını girin
-4. Taksit sayısını seçin (3 veya 5)
-5. Sistem otomatik hesaplama yapar
-6. Müşteriye onay maili gönderilir
-7. Müşteri onayladıktan sonra taksitler aktif olur
-
-## 🔧 Sistem Ayarları
-
-### Faiz Oranları
-- **3 Taksit**: %5 faiz
-- **5 Taksit**: %10 faiz
-
-### Kredi Limiti Kuralları
-- **Varsayılan Limit**: 5.000₺
-- **Düzenli Ödeme Bonusu**: +%20 artış
-- **Gecikme Cezası**: -%5 azalış
-
-### Email Zamanlaması
-- **Kayıt Onayı**: Anında gönderilir
-- **Hatırlatma**: Vade tarihinden 3 gün önce
-- **Gecikme Uyarısı**: Vade tarihinden 1 gün sonra
-- **Günlük Kontrol**: Her gün saat 12:00
-
-### Ödeme Bilgileri
-- **Şirket**: MARKA WORLD GİYİM LTD. ŞTİ.
-- **IBAN**: TR12 3456 7890 1234 5678 9012 34
-- **Banka**: Türkiye İş Bankası - Merkez Şubesi
-
-## 📊 Veritabanı
-
-Sistem SQLite veritabanı kullanır:
-- **Dosya**: `server/database/database.sqlite`
-- **Otomatik Tablo Oluşturma**: İlk çalıştırmada
-- **Email Onay Sistemi**: verification_token ve email_verified alanları
-
-### Müşteri Durumları
-- **pending**: Email onayı bekliyor
-- **active**: Onaylanmış ve aktif
-- **inactive**: Pasif müşteri
-
-## 🛠️ Teknik Detaylar
+## 🛠️ Teknolojiler
 
 ### Backend
-- **Framework**: Node.js + Express
-- **Veritabanı**: SQLite3
-- **Email**: Nodemailer (Gmail SMTP)
-- **Cron**: node-cron (günlük işlemler)
-- **Validation**: express-validator
-- **Security**: crypto (token generation)
+- **Node.js** - Server runtime
+- **Express.js** - Web framework
+- **SQLite** - Veritabanı
+- **Nodemailer** - Email servisi
+- **JWT** - Authentication
+- **Node-cron** - Zamanlanmış görevler
 
 ### Frontend
-- **Framework**: React 18
-- **UI Library**: Material-UI (MUI)
-- **Tema**: Custom siyah-beyaz tema
-- **Routing**: React Router v6
-- **HTTP Client**: Axios
-- **Icons**: Material Icons
-- **Date Picker**: @mui/x-date-pickers
-- **Date Library**: Day.js
+- **React** - UI framework
+- **Material-UI** - Component library
+- **React Router** - Routing
+- **Axios** - HTTP client
+- **Day.js** - Date handling
 
-### Tasarım Özellikleri
-- **Renk Paleti**: Siyah (#000000) ve beyaz (#ffffff)
-- **Typography**: Roboto font ailesi
-- **Bileşenler**: Rounded corners, subtle shadows
-- **Responsive**: Mobile-first yaklaşım
-- **Stepper**: Step-by-step kayıt süreci
+## 📦 Kurulum
 
-## 📁 Proje Yapısı
+### Gereksinimler
+- Node.js (v16 veya üzeri)
+- npm veya yarn
 
+### 1. Projeyi İndirin
+```bash
+git clone [repository-url]
+cd marka-world
 ```
-├── server/                 # Backend API
-│   ├── database/          # Veritabanı işlemleri
-│   ├── routes/            # API rotaları
-│   ├── services/          # Servisler (email, cron)
-│   └── index.js           # Ana sunucu dosyası
-├── client/                # Frontend React uygulaması
-│   ├── public/
-│   │   └── logo.png       # Şirket logosu
-│   ├── src/
-│   │   ├── components/    # React bileşenleri
-│   │   ├── pages/         # Sayfa bileşenleri
-│   │   │   ├── CustomerLogin.js      # Müşteri giriş
-│   │   │   ├── CustomerRegister.js   # Müşteri kayıt
-│   │   │   └── CustomerProfile.js    # Müşteri profil
-│   │   ├── services/      # API servisleri
-│   │   └── theme.js       # Material-UI tema
-├── logo.png               # Ana logo dosyası
-└── package.json           # Ana proje dosyası
+
+### 2. Bağımlılıkları Yükleyin
+```bash
+npm run install-all
+```
+
+### 3. Ortam Değişkenlerini Ayarlayın
+`server/.env` dosyası oluşturun:
+```env
+# Şirket Bilgileri
+COMPANY_NAME=Marka World
+COMPANY_ADDRESS=Karşıyaka Mah. Vali Ayhan Çevik Bulvarı 46/A, Merkez/TOKAT
+COMPANY_TAX_NO=0012587682
+
+# Email Ayarları
+EMAIL_HOST=fr-astral.guzelhosting.com
+EMAIL_PORT=465
+EMAIL_SECURE=true
+EMAIL_USER=info@markaworld.com.tr
+EMAIL_PASS=w0;d;JiZ8a,v
+EMAIL_FROM=Marka World <info@markaworld.com.tr>
+
+# JWT Secret
+JWT_SECRET=marka-world-secret-key
+
+# Port
+PORT=5000
+```
+
+### 4. Sistemi Başlatın
+```bash
+npm start
+```
+
+## 🔧 Kullanım
+
+### Admin Paneli
+1. `http://localhost:3000/admin-login` adresine gidin
+2. Giriş bilgileri:
+   - **Kullanıcı Adı:** markaworld
+   - **Şifre:** Marka60..
+
+### Müşteri Paneli
+1. `http://localhost:3000/customer-login` adresine gidin
+2. Yeni hesap oluşturun veya mevcut hesabınızla giriş yapın
+
+## 📊 Veritabanı Yapısı
+
+### Tablolar
+- **customers** - Müşteri bilgileri
+- **sales** - Satış kayıtları
+- **installments** - Taksit bilgileri
+- **customer_agreements** - Sözleşme onayları
+- **email_templates** - Email şablonları
+- **settings** - Sistem ayarları
+
+## 🚀 Deployment
+
+### Vercel (Önerilen)
+1. Vercel hesabı oluşturun
+2. Projeyi GitHub'a yükleyin
+3. Vercel'de import edin
+4. Ortam değişkenlerini ayarlayın
+
+### Manuel Deployment
+```bash
+# Build oluşturun
+npm run build
+
+# Production modunda başlatın
+NODE_ENV=production npm start
 ```
 
 ## 🔒 Güvenlik
 
-- **Müşteri Kimlik Doğrulama**: TC + Telefon kombinasyonu
-- **Email Onay Sistemi**: Hesap aktivasyonu için zorunlu
-- **Token Tabanlı Onay**: Güvenli verification token'ları
-- **Input Validation**: Tüm form girişleri doğrulanır
-- **SQL Injection Koruması**: Parametreli sorgular
-- **CORS Ayarları**: Güvenli API erişimi
+- JWT token tabanlı authentication
+- Password hashing (bcrypt)
+- CORS koruması
+- Input validation
+- SQL injection koruması
+
+## 📧 Email Konfigürasyonu
+
+Sistem şu email sağlayıcıları ile test edilmiştir:
+- **Guzel Hosting** (fr-astral.guzelhosting.com)
+- Gmail SMTP
+- Outlook SMTP
 
 ## 🐛 Sorun Giderme
 
-### Sunucu Başlamıyor
+### Port Hatası
 ```bash
-# Port kontrolü
-netstat -an | findstr :5000
-netstat -an | findstr :3000
+# Port 5000 kullanımda ise
+lsof -ti:5000 | xargs kill -9
 ```
 
-### Email Gönderilmiyor
-- `.env` dosyasındaki email ayarlarını kontrol edin
-- Gmail uygulama şifresini doğru girdiğinizden emin olun
-- 2 faktörlü doğrulamanın açık olduğunu kontrol edin
+### Email Gönderim Hatası
+- SMTP ayarlarını kontrol edin
+- Firewall ayarlarını kontrol edin
+- Email sağlayıcı limitlerini kontrol edin
 
-### Müşteri Kayıt Olamıyor
-- Email adresinin geçerli olduğundan emin olun
-- TC Kimlik No'nun 11 haneli olduğunu kontrol edin
-- Aynı TC veya email ile daha önce kayıt olunmadığından emin olun
+### Veritabanı Hatası
+```bash
+# Veritabanını sıfırla
+rm server/database.sqlite
+npm start
+```
 
-### Email Onayı Gelmiyor
-- Spam klasörünü kontrol edin
-- Email servis ayarlarını kontrol edin
-- Backend loglarında hata mesajlarını kontrol edin
+## 📝 API Endpoints
 
-### Logo Görünmüyor
-- `logo.png` dosyasının `client/public/` klasöründe olduğundan emin olun
-- Tarayıcı cache'ini temizleyin
+### Müşteri API'leri
+- `POST /api/customers/register` - Müşteri kayıt
+- `POST /api/customers/login` - Müşteri giriş
+- `GET /api/customers/verify-email/:token` - Email onay
 
-## 📞 Destek
+### Admin API'leri
+- `POST /api/admin/login` - Admin giriş
+- `GET /api/admin/profile` - Admin profil
 
-Herhangi bir sorun yaşarsanız:
-1. **Konsol Logları**: Browser Developer Tools → Console
-2. **Network İstekleri**: Developer Tools → Network
-3. **Backend Logları**: Terminal çıktılarını kontrol edin
+### Satış API'leri
+- `POST /api/sales` - Yeni satış
+- `POST /api/sales/approve/:token` - Satış onay
 
-## 🔄 Gelecek Özellikler
+## 🤝 Katkıda Bulunma
 
-- [ ] SMS bildirimleri
-- [ ] Şifre sıfırlama sistemi
-- [ ] Sosyal medya ile giriş
-- [ ] Stok yönetimi entegrasyonu
-- [ ] Detaylı raporlama sistemi
-- [ ] Mobil uygulama
-- [ ] Çoklu mağaza desteği
-- [ ] QR kod ile ödeme takibi
+1. Fork edin
+2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
+3. Commit edin (`git commit -m 'Add amazing feature'`)
+4. Push edin (`git push origin feature/amazing-feature`)
+5. Pull Request oluşturun
+
+## 📄 Lisans
+
+Bu proje MIT lisansı altında lisanslanmıştır.
+
+## 📞 İletişim
+
+- **Email:** info@markaworld.com.tr
+- **Şirket:** 3 KARE YAZILIM VE TASARIM AJANSI LİMİTED ŞİRKETİ
+
+## 🔄 Versiyon Geçmişi
+
+### v1.0.0 (2024-06-02)
+- ✅ Müşteri kayıt ve giriş sistemi
+- ✅ Email onay sistemi
+- ✅ 3 aşamalı sözleşme onayı
+- ✅ Taksitli satış sistemi
+- ✅ Admin paneli
+- ✅ Otomatik email bildirimleri
+- ✅ Cron job sistemi
 
 ---
 
-**Geliştirici**: AI Assistant  
-**Versiyon**: 2.1.0  
-**Lisans**: MIT  
-**Son Güncelleme**: 2024 
+**Marka World** - Modern müşteri ödeme takip sistemi 🚀 

@@ -9,7 +9,9 @@ import {
   Alert,
   InputAdornment,
   IconButton,
-  Divider
+  Divider,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import { Visibility, VisibilityOff, Email, Lock } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +26,8 @@ const CustomerLogin = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleChange = (e) => {
     setFormData({
@@ -63,24 +67,60 @@ const CustomerLogin = () => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8 }}>
-      <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
-        <Box textAlign="center" mb={4}>
+    <Container 
+      maxWidth="sm" 
+      sx={{ 
+        py: isMobile ? 2 : 8,
+        px: isMobile ? 1 : 3,
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      <Paper 
+        elevation={isMobile ? 2 : 3} 
+        sx={{ 
+          p: isMobile ? 3 : 4, 
+          borderRadius: isMobile ? 2 : 3,
+          width: '100%',
+          maxWidth: isMobile ? '100%' : '500px'
+        }}
+      >
+        <Box textAlign="center" mb={isMobile ? 3 : 4}>
           <img 
             src="/logo.png" 
             alt="Marka World" 
-            style={{ height: '80px', marginBottom: '20px' }}
+            style={{ 
+              height: isMobile ? '60px' : '80px', 
+              marginBottom: isMobile ? '16px' : '20px' 
+            }}
           />
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography 
+            variant={isMobile ? "h5" : "h4"} 
+            component="h1" 
+            gutterBottom
+            sx={{ fontWeight: 'bold' }}
+          >
             Müşteri Girişi
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ fontSize: isMobile ? '0.8rem' : '0.875rem' }}
+          >
             Email ve şifreniz ile giriş yapın
           </Typography>
         </Box>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3,
+              fontSize: isMobile ? '0.8rem' : '0.875rem'
+            }}
+          >
             {error}
           </Alert>
         )}
@@ -95,12 +135,19 @@ const CustomerLogin = () => {
             onChange={handleChange}
             margin="normal"
             required
+            autoComplete="email"
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Email />
+                  <Email sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
                 </InputAdornment>
               ),
+            }}
+            sx={{
+              mb: isMobile ? 1.5 : 2,
+              '& .MuiOutlinedInput-root': {
+                minHeight: isMobile ? '48px' : '56px',
+              }
             }}
           />
 
@@ -112,11 +159,12 @@ const CustomerLogin = () => {
             onChange={handleChange}
             margin="normal"
             required
+            autoComplete="current-password"
             type={showPassword ? 'text' : 'password'}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Lock />
+                  <Lock sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -124,11 +172,18 @@ const CustomerLogin = () => {
                   <IconButton
                     onClick={() => setShowPassword(!showPassword)}
                     edge="end"
+                    size={isMobile ? 'small' : 'medium'}
                   >
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
                 </InputAdornment>
               ),
+            }}
+            sx={{
+              mb: isMobile ? 2 : 3,
+              '& .MuiOutlinedInput-root': {
+                minHeight: isMobile ? '48px' : '56px',
+              }
             }}
           />
 
@@ -138,14 +193,24 @@ const CustomerLogin = () => {
             variant="contained"
             size="large"
             disabled={loading}
-            sx={{ mt: 3, mb: 2, py: 1.5 }}
+            sx={{ 
+              mt: isMobile ? 2 : 3, 
+              mb: 2, 
+              py: isMobile ? 1.5 : 2,
+              fontSize: isMobile ? '1rem' : '1.1rem',
+              fontWeight: 'bold'
+            }}
           >
             {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
           </Button>
         </form>
 
-        <Divider sx={{ my: 3 }}>
-          <Typography variant="body2" color="text.secondary">
+        <Divider sx={{ my: isMobile ? 2 : 3 }}>
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
+          >
             veya
           </Typography>
         </Divider>
@@ -155,23 +220,38 @@ const CustomerLogin = () => {
           variant="outlined"
           size="large"
           onClick={handleRegister}
-          sx={{ py: 1.5 }}
+          sx={{ 
+            py: isMobile ? 1.5 : 2,
+            fontSize: isMobile ? '1rem' : '1.1rem',
+            fontWeight: 'bold'
+          }}
         >
           Yeni Hesap Oluştur
         </Button>
 
-        <Box textAlign="center" mt={3}>
-          <Typography variant="body2" color="text.secondary">
+        <Box textAlign="center" mt={isMobile ? 2 : 3}>
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ 
+              fontSize: isMobile ? '0.75rem' : '0.875rem',
+              lineHeight: 1.4
+            }}
+          >
             Hesabınız yok mu? Yukarıdaki "Yeni Hesap Oluştur" butonunu kullanın.
           </Typography>
         </Box>
 
-        <Box textAlign="center" mt={2}>
+        <Box textAlign="center" mt={isMobile ? 1.5 : 2}>
           <Button
             variant="text"
             size="small"
             onClick={() => navigate('/admin-login')}
-            sx={{ color: 'text.secondary', fontSize: '0.8rem' }}
+            sx={{ 
+              color: 'text.secondary', 
+              fontSize: isMobile ? '0.7rem' : '0.8rem',
+              minHeight: isMobile ? '36px' : '40px'
+            }}
           >
             Admin Paneli
           </Button>

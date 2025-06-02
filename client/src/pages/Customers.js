@@ -24,6 +24,16 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Card,
+  CardContent,
+  Stack,
+  useTheme,
+  useMediaQuery,
+  Collapse,
+  List,
+  ListItem,
+  ListItemText,
+  Divider
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -31,6 +41,12 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Person as PersonIcon,
+  Phone as PhoneIcon,
+  Email as EmailIcon,
+  CreditCard as CreditCardIcon
 } from '@mui/icons-material';
 import { customerAPI } from '../services/api';
 
@@ -42,6 +58,7 @@ function Customers() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [expandedCard, setExpandedCard] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     tc_no: '',
@@ -53,6 +70,8 @@ function Customers() {
     status: 'active'
   });
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   useEffect(() => {
     loadCustomers();
@@ -163,6 +182,110 @@ function Customers() {
     return <Chip label={statusInfo.label} color={statusInfo.color} size="small" />;
   };
 
+  const handleCardExpand = (customerId) => {
+    setExpandedCard(expandedCard === customerId ? null : customerId);
+  };
+
+  const renderMobileCard = (customer) => (
+    <Card key={customer.id} sx={{ mb: 1.5 }}>
+      <CardContent sx={{ p: 1.5 }}>
+        <Stack spacing={1}>
+          {/* Header */}
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
+                {customer.name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                TC: {customer.tc_no}
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              {getStatusChip(customer.status)}
+              <IconButton 
+                size="small" 
+                onClick={() => handleCardExpand(customer.id)}
+                sx={{ p: 0.5 }}
+              >
+                {expandedCard === customer.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              </IconButton>
+            </Stack>
+          </Stack>
+
+          {/* Quick Info */}
+          <Stack direction="row" spacing={2}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                Telefon
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                {customer.phone}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                Kredi Limiti
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
+                {parseFloat(customer.credit_limit).toLocaleString('tr-TR')}₺
+              </Typography>
+            </Box>
+          </Stack>
+
+          {/* Expanded Content */}
+          <Collapse in={expandedCard === customer.id}>
+            <Divider sx={{ my: 1 }} />
+            <Stack spacing={1}>
+              {customer.email && (
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                    Email
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                    {customer.email}
+                  </Typography>
+                </Box>
+              )}
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                  Mevcut Borç
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
+                  {parseFloat(customer.current_debt || 0).toLocaleString('tr-TR')}₺
+                </Typography>
+              </Box>
+              
+              {/* Action Buttons */}
+              <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 1 }}>
+                <IconButton
+                  size="small"
+                  onClick={() => navigate(`/admin/customers/${customer.id}`)}
+                  sx={{ backgroundColor: 'primary.main', color: 'white', '&:hover': { backgroundColor: 'primary.dark' } }}
+                >
+                  <VisibilityIcon sx={{ fontSize: '1rem' }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={() => handleOpenDialog(customer)}
+                  sx={{ backgroundColor: 'warning.main', color: 'white', '&:hover': { backgroundColor: 'warning.dark' } }}
+                >
+                  <EditIcon sx={{ fontSize: '1rem' }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={() => handleDelete(customer)}
+                  sx={{ backgroundColor: 'error.main', color: 'white', '&:hover': { backgroundColor: 'error.dark' } }}
+                >
+                  <DeleteIcon sx={{ fontSize: '1rem' }} />
+                </IconButton>
+              </Stack>
+            </Stack>
+          </Collapse>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -172,43 +295,61 @@ function Customers() {
   }
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Müşteriler</Typography>
+    <Box sx={{ p: isMobile ? 1 : 0 }}>
+      {/* Header */}
+      <Stack 
+        direction={isMobile ? "column" : "row"}
+        justifyContent="space-between" 
+        alignItems={isMobile ? "stretch" : "center"}
+        spacing={isMobile ? 2 : 0}
+        mb={3}
+      >
+        <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 'bold' }}>
+          Müşteriler ({filteredCustomers.length})
+        </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => handleOpenDialog()}
+          size={isMobile ? "medium" : "large"}
+          sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}
         >
           Yeni Müşteri
         </Button>
-      </Box>
+      </Stack>
 
       {/* Arama ve Filtreleme */}
-      <Box mb={3}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
+      <Paper sx={{ p: isMobile ? 1.5 : 2, mb: 2 }}>
+        <Grid container spacing={isMobile ? 1.5 : 2}>
+          <Grid item xs={12} md={8}>
             <TextField
               fullWidth
               placeholder="Müşteri ara (ad, TC, telefon)"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              size={isMobile ? "small" : "medium"}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon />
+                    <SearchIcon sx={{ fontSize: isMobile ? '1rem' : '1.2rem' }} />
                   </InputAdornment>
                 ),
               }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  fontSize: isMobile ? '0.8rem' : '0.9rem'
+                }
+              }}
             />
           </Grid>
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth>
-              <InputLabel>Durum</InputLabel>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+              <InputLabel sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}>Durum</InputLabel>
               <Select
                 value={statusFilter}
                 label="Durum"
                 onChange={(e) => setStatusFilter(e.target.value)}
+                sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}
               >
                 <MenuItem value="all">Tümü</MenuItem>
                 <MenuItem value="active">Aktif</MenuItem>
@@ -217,101 +358,141 @@ function Customers() {
             </FormControl>
           </Grid>
         </Grid>
-      </Box>
+      </Paper>
 
-      {/* Müşteri Tablosu */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Ad Soyad</TableCell>
-              <TableCell>TC Kimlik No</TableCell>
-              <TableCell>Telefon</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Kredi Limiti</TableCell>
-              <TableCell>Mevcut Borç</TableCell>
-              <TableCell>Durum</TableCell>
-              <TableCell>İşlemler</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredCustomers.length > 0 ? (
-              filteredCustomers.map((customer) => (
-                <TableRow key={customer.id}>
-                  <TableCell>{customer.name}</TableCell>
-                  <TableCell>{customer.tc_no}</TableCell>
-                  <TableCell>{customer.phone}</TableCell>
-                  <TableCell>{customer.email || '-'}</TableCell>
-                  <TableCell>{parseFloat(customer.credit_limit).toLocaleString('tr-TR')}₺</TableCell>
-                  <TableCell>{parseFloat(customer.current_debt).toLocaleString('tr-TR')}₺</TableCell>
-                  <TableCell>{getStatusChip(customer.status)}</TableCell>
-                  <TableCell>
-                    <IconButton
-                      size="small"
-                      onClick={() => navigate(`/customers/${customer.id}`)}
-                      title="Detay"
-                    >
-                      <VisibilityIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleOpenDialog(customer)}
-                      title="Düzenle"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDelete(customer)}
-                      title="Sil"
-                      color="error"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+      {/* Müşteri Listesi */}
+      {isMobile ? (
+        // Mobil Card Görünümü
+        <Box>
+          {filteredCustomers.length > 0 ? (
+            filteredCustomers.map(renderMobileCard)
+          ) : (
+            <Paper sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="body1" color="text.secondary">
+                Müşteri bulunamadı
+              </Typography>
+            </Paper>
+          )}
+        </Box>
+      ) : (
+        // Masaüstü Tablo Görünümü
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 'bold' }}>Ad Soyad</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>TC Kimlik No</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Telefon</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Kredi Limiti</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Mevcut Borç</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Durum</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>İşlemler</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredCustomers.length > 0 ? (
+                filteredCustomers.map((customer) => (
+                  <TableRow key={customer.id}>
+                    <TableCell>{customer.name}</TableCell>
+                    <TableCell>{customer.tc_no}</TableCell>
+                    <TableCell>{customer.phone}</TableCell>
+                    <TableCell>{customer.email || '-'}</TableCell>
+                    <TableCell>{parseFloat(customer.credit_limit).toLocaleString('tr-TR')}₺</TableCell>
+                    <TableCell>{parseFloat(customer.current_debt || 0).toLocaleString('tr-TR')}₺</TableCell>
+                    <TableCell>{getStatusChip(customer.status)}</TableCell>
+                    <TableCell>
+                      <IconButton
+                        size="small"
+                        onClick={() => navigate(`/admin/customers/${customer.id}`)}
+                        title="Detay"
+                      >
+                        <VisibilityIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenDialog(customer)}
+                        title="Düzenle"
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDelete(customer)}
+                        title="Sil"
+                        color="error"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={8} align="center">
+                    Müşteri bulunamadı
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={8} align="center">
-                  Müşteri bulunamadı
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Müşteri Ekleme/Düzenleme Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
+      <Dialog 
+        open={openDialog} 
+        onClose={handleCloseDialog} 
+        maxWidth="md" 
+        fullWidth
+        fullScreen={isMobile}
+      >
+        <DialogTitle sx={{ fontSize: isMobile ? '1rem' : '1.25rem' }}>
           {selectedCustomer ? 'Müşteri Düzenle' : 'Yeni Müşteri Ekle'}
         </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
+        <DialogContent sx={{ p: isMobile ? 2 : 3 }}>
+          <Grid container spacing={isMobile ? 2 : 3} sx={{ mt: 0.5 }}>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Ad Soyad *"
+                label="Ad Soyad"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputLabel-root': {
+                    fontSize: isMobile ? '0.8rem' : '0.9rem'
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="TC Kimlik No *"
+                label="TC Kimlik No"
                 value={formData.tc_no}
                 onChange={(e) => setFormData({ ...formData, tc_no: e.target.value })}
                 inputProps={{ maxLength: 11 }}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputLabel-root': {
+                    fontSize: isMobile ? '0.8rem' : '0.9rem'
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Telefon *"
+                label="Telefon"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputLabel-root': {
+                    fontSize: isMobile ? '0.8rem' : '0.9rem'
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -321,6 +502,12 @@ function Customers() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputLabel-root': {
+                    fontSize: isMobile ? '0.8rem' : '0.9rem'
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -331,6 +518,12 @@ function Customers() {
                 value={formData.birth_date}
                 onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
                 InputLabelProps={{ shrink: true }}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputLabel-root': {
+                    fontSize: isMobile ? '0.8rem' : '0.9rem'
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -340,6 +533,12 @@ function Customers() {
                 type="number"
                 value={formData.credit_limit}
                 onChange={(e) => setFormData({ ...formData, credit_limit: parseFloat(e.target.value) })}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputLabel-root': {
+                    fontSize: isMobile ? '0.8rem' : '0.9rem'
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -347,19 +546,26 @@ function Customers() {
                 fullWidth
                 label="Adres"
                 multiline
-                rows={3}
+                rows={isMobile ? 2 : 3}
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputLabel-root': {
+                    fontSize: isMobile ? '0.8rem' : '0.9rem'
+                  }
+                }}
               />
             </Grid>
             {selectedCustomer && (
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Durum</InputLabel>
+                <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+                  <InputLabel sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}>Durum</InputLabel>
                   <Select
                     value={formData.status}
                     label="Durum"
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}
                   >
                     <MenuItem value="active">Aktif</MenuItem>
                     <MenuItem value="passive">Pasif</MenuItem>
@@ -369,9 +575,20 @@ function Customers() {
             )}
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>İptal</Button>
-          <Button onClick={handleSubmit} variant="contained">
+        <DialogActions sx={{ p: isMobile ? 2 : 3, gap: 1 }}>
+          <Button 
+            onClick={handleCloseDialog}
+            size={isMobile ? "medium" : "large"}
+            sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}
+          >
+            İptal
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            variant="contained"
+            size={isMobile ? "medium" : "large"}
+            sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}
+          >
             {selectedCustomer ? 'Güncelle' : 'Ekle'}
           </Button>
         </DialogActions>

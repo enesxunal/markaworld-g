@@ -27,6 +27,7 @@ import {
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
+const mobileDrawerWidth = 260;
 
 const menuItems = [
   { text: 'Ana Sayfa', icon: <DashboardIcon />, path: '/admin/dashboard' },
@@ -40,7 +41,7 @@ function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -62,27 +63,68 @@ function Layout() {
 
   const drawer = (
     <div>
-      <Toolbar>
+      <Toolbar sx={{ minHeight: '56px !important', px: isMobile ? 1 : 2 }}>
         <Box display="flex" alignItems="center" width="100%">
           <img 
             src="/logo.png" 
             alt="Marka World" 
-            style={{ height: '30px', marginRight: '8px' }}
+            style={{ 
+              height: isMobile ? '28px' : '32px', 
+              marginRight: '8px' 
+            }}
           />
-          <Typography variant="h6" noWrap component="div" sx={{ fontSize: '1rem' }}>
+          <Typography 
+            variant="h6" 
+            noWrap 
+            component="div" 
+            sx={{ 
+              fontSize: isMobile ? '0.85rem' : '0.95rem',
+              fontWeight: 'bold'
+            }}
+          >
             Admin Panel
           </Typography>
         </Box>
       </Toolbar>
-      <List>
+      <List sx={{ px: isMobile ? 0.5 : 1 }}>
         {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
+          <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
               selected={location.pathname === item.path}
               onClick={() => handleMenuClick(item.path)}
+              sx={{
+                borderRadius: 1.5,
+                minHeight: isMobile ? 40 : 44,
+                mx: isMobile ? 0.5 : 1,
+                '&.Mui-selected': {
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'primary.dark',
+                  },
+                  '& .MuiListItemIcon-root': {
+                    color: 'white',
+                  },
+                },
+              }}
             >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
+              <ListItemIcon 
+                sx={{ 
+                  minWidth: isMobile ? 32 : 36,
+                  '& .MuiSvgIcon-root': {
+                    fontSize: isMobile ? '1.1rem' : '1.3rem'
+                  }
+                }}
+              >
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText 
+                primary={item.text}
+                primaryTypographyProps={{
+                  fontSize: isMobile ? '0.8rem' : '0.85rem',
+                  fontWeight: location.pathname === item.path ? 'bold' : 'normal'
+                }}
+              />
             </ListItemButton>
           </ListItem>
         ))}
@@ -96,35 +138,50 @@ function Layout() {
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
+          width: { md: `calc(100% - ${drawerWidth}px)` },
+          ml: { md: `${drawerWidth}px` },
+          zIndex: theme.zIndex.drawer + 1,
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: '56px !important', px: isMobile ? 1 : 2 }}>
           <IconButton
             color="inherit"
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
+            sx={{ mr: 1, display: { md: 'none' } }}
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Müşteri Ödeme Takip Sistemi
+          <Typography 
+            variant="h6" 
+            noWrap 
+            component="div" 
+            sx={{ 
+              flexGrow: 1,
+              fontSize: isMobile ? '0.9rem' : '1.1rem',
+              fontWeight: 'bold'
+            }}
+          >
+            {isMobile ? 'Marka World' : 'Müşteri Ödeme Takip Sistemi'}
           </Typography>
           <Button
             color="inherit"
-            startIcon={<ExitToAppIcon />}
+            startIcon={!isMobile && <ExitToAppIcon sx={{ fontSize: '1rem' }} />}
             onClick={handleLogout}
+            sx={{
+              fontSize: isMobile ? '0.75rem' : '0.85rem',
+              minWidth: isMobile ? 'auto' : '100px',
+              px: isMobile ? 1 : 1.5,
+            }}
           >
-            Çıkış Yap
+            {isMobile ? <ExitToAppIcon sx={{ fontSize: '1rem' }} /> : 'Çıkış'}
           </Button>
         </Toolbar>
       </AppBar>
       <Box
         component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
       >
         <Drawer
           variant="temporary"
@@ -134,8 +191,11 @@ function Layout() {
             keepMounted: true,
           }}
           sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: mobileDrawerWidth 
+            },
           }}
         >
           {drawer}
@@ -143,8 +203,12 @@ function Layout() {
         <Drawer
           variant="permanent"
           sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            display: { xs: 'none', md: 'block' },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth,
+              borderRight: '1px solid #e0e0e0'
+            },
           }}
           open
         >
@@ -155,11 +219,13 @@ function Layout() {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          p: isMobile ? 1 : 2,
+          width: { md: `calc(100% - ${drawerWidth}px)` },
+          minHeight: '100vh',
+          backgroundColor: '#fafafa',
         }}
       >
-        <Toolbar />
+        <Toolbar sx={{ minHeight: '56px !important' }} />
         <Outlet />
       </Box>
     </Box>

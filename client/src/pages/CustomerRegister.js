@@ -11,7 +11,9 @@ import {
   Grid,
   Stepper,
   Step,
-  StepLabel
+  StepLabel,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   Person,
@@ -35,6 +37,9 @@ const steps = ['Kişisel Bilgiler', 'İletişim Bilgileri', 'Kayıt Tamamlandı'
 
 const CustomerRegister = () => {
   const [activeStep, setActiveStep] = useState(0);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const [formData, setFormData] = useState({
     name: '',
     tc_no: '',
@@ -159,7 +164,7 @@ const CustomerRegister = () => {
     switch (step) {
       case 0:
         return (
-          <Grid container spacing={3}>
+          <Grid container spacing={isMobile ? 2 : 3}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -172,9 +177,14 @@ const CustomerRegister = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Person />
+                      <Person sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
                     </InputAdornment>
                   ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    minHeight: isMobile ? '48px' : '56px',
+                  }
                 }}
               />
             </Grid>
@@ -191,9 +201,14 @@ const CustomerRegister = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <CreditCard />
+                      <CreditCard sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
                     </InputAdornment>
                   ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    minHeight: isMobile ? '48px' : '56px',
+                  }
                 }}
               />
             </Grid>
@@ -206,13 +221,17 @@ const CustomerRegister = () => {
                 onChange={handleChange}
                 error={!!errors.phone}
                 helperText={errors.phone}
-                placeholder="05551234567"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Phone />
+                      <Phone sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
                     </InputAdornment>
                   ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    minHeight: isMobile ? '48px' : '56px',
+                  }
                 }}
               />
             </Grid>
@@ -229,11 +248,16 @@ const CustomerRegister = () => {
                       InputProps: {
                         startAdornment: (
                           <InputAdornment position="start">
-                            <CalendarToday />
+                            <CalendarToday sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
                           </InputAdornment>
                         ),
                       },
-                    },
+                      sx: {
+                        '& .MuiOutlinedInput-root': {
+                          minHeight: isMobile ? '48px' : '56px',
+                        }
+                      }
+                    }
                   }}
                 />
               </LocalizationProvider>
@@ -243,7 +267,7 @@ const CustomerRegister = () => {
 
       case 1:
         return (
-          <Grid container spacing={3}>
+          <Grid container spacing={isMobile ? 2 : 3}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -253,17 +277,22 @@ const CustomerRegister = () => {
                 value={formData.email}
                 onChange={handleChange}
                 error={!!errors.email}
-                helperText={errors.email || 'Hesap onayı için email adresinize link gönderilecek'}
+                helperText={errors.email}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Email />
+                      <Email sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
                     </InputAdornment>
                   ),
                 }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    minHeight: isMobile ? '48px' : '56px',
+                  }
+                }}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Şifre"
@@ -272,17 +301,22 @@ const CustomerRegister = () => {
                 value={formData.password}
                 onChange={handleChange}
                 error={!!errors.password}
-                helperText={errors.password || 'En az 6 karakter'}
+                helperText={errors.password}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Lock />
+                      <Lock sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
                     </InputAdornment>
                   ),
                 }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    minHeight: isMobile ? '48px' : '56px',
+                  }
+                }}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Şifre Tekrarı"
@@ -295,9 +329,14 @@ const CustomerRegister = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Lock />
+                      <Lock sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
                     </InputAdornment>
                   ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    minHeight: isMobile ? '48px' : '56px',
+                  }
                 }}
               />
             </Grid>
@@ -306,57 +345,65 @@ const CustomerRegister = () => {
                 fullWidth
                 label="Adres (İsteğe Bağlı)"
                 name="address"
+                multiline
+                rows={isMobile ? 2 : 3}
                 value={formData.address}
                 onChange={handleChange}
-                multiline
-                rows={3}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1 }}>
-                      <Home />
+                      <Home sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
                     </InputAdornment>
                   ),
                 }}
               />
-            </Grid>
-            
-            {errors.general && (
-              <Grid item xs={12}>
-                <Alert severity="error">{errors.general}</Alert>
-              </Grid>
-            )}
-            
-            <Grid item xs={12}>
-              <Alert severity="info">
-                <Typography variant="body2">
-                  <strong>Kayıt sonrası:</strong>
-                  <br />• Email adresinize onay linki gönderilecek
-                  <br />• Onay sonrası 5.000₺ kredi limitiniz aktif olacak
-                  <br />• Email ve şifre ile giriş yapabileceksiniz
-                  <br />• Taksitli alışveriş yapabileceksiniz
-                </Typography>
-              </Alert>
             </Grid>
           </Grid>
         );
 
       case 2:
         return (
-          <Box textAlign="center">
-            <CheckCircle sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
-            <Typography variant="h5" gutterBottom>
+          <Box textAlign="center" py={isMobile ? 2 : 4}>
+            <CheckCircle 
+              sx={{ 
+                fontSize: isMobile ? 64 : 80, 
+                color: 'success.main', 
+                mb: isMobile ? 2 : 3 
+              }} 
+            />
+            <Typography 
+              variant={isMobile ? "h5" : "h4"} 
+              gutterBottom 
+              color="success.main"
+              sx={{ fontWeight: 'bold' }}
+            >
               Kayıt Başarılı!
             </Typography>
-            <Typography variant="body1" color="text.secondary" paragraph>
-              Sayın <strong>{formData.name}</strong>, kayıt işleminiz tamamlandı.
+            <Typography 
+              variant="body1" 
+              color="text.secondary" 
+              paragraph
+              sx={{ 
+                fontSize: isMobile ? '0.9rem' : '1rem',
+                lineHeight: 1.6,
+                maxWidth: '400px',
+                mx: 'auto'
+              }}
+            >
+              Email adresinize gönderilen onay linkine tıklayarak hesabınızı aktifleştirin.
             </Typography>
-            <Alert severity="success" sx={{ mb: 3 }}>
-              Email adresinize ({formData.email}) hesap onay linki gönderildi. 
-              Lütfen email'inizi kontrol edin ve onay linkine tıklayın.
-            </Alert>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Email onayından sonra email adresiniz ve şifreniz ile giriş yapabilirsiniz.
-            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/customer-login')}
+              sx={{ 
+                mt: isMobile ? 2 : 3,
+                px: isMobile ? 3 : 4,
+                py: isMobile ? 1.5 : 2,
+                fontSize: isMobile ? '0.9rem' : '1rem'
+              }}
+            >
+              Giriş Sayfasına Dön
+            </Button>
           </Box>
         );
 
@@ -366,71 +413,139 @@ const CustomerRegister = () => {
   };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
-        <Box textAlign="center" mb={4}>
+    <Container 
+      maxWidth="md" 
+      sx={{ 
+        py: isMobile ? 2 : 4,
+        px: isMobile ? 1 : 3,
+        minHeight: '100vh'
+      }}
+    >
+      <Paper 
+        elevation={isMobile ? 2 : 3} 
+        sx={{ 
+          p: isMobile ? 2 : 4, 
+          borderRadius: isMobile ? 2 : 3 
+        }}
+      >
+        <Box textAlign="center" mb={isMobile ? 3 : 4}>
           <img 
             src="/logo.png" 
             alt="Marka World" 
-            style={{ height: '60px', marginBottom: '20px' }}
+            style={{ 
+              height: isMobile ? '50px' : '60px', 
+              marginBottom: isMobile ? '16px' : '20px' 
+            }}
           />
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography 
+            variant={isMobile ? "h5" : "h4"} 
+            component="h1" 
+            gutterBottom
+            sx={{ fontWeight: 'bold' }}
+          >
             Yeni Hesap Oluştur
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Taksitli alışveriş için hesap oluşturun
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ fontSize: isMobile ? '0.8rem' : '0.875rem' }}
+          >
+            Marka World'da taksitli alışveriş için hesap oluşturun
           </Typography>
         </Box>
 
-        <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+        <Stepper 
+          activeStep={activeStep} 
+          sx={{ 
+            mb: isMobile ? 3 : 4,
+            '& .MuiStepLabel-label': {
+              fontSize: isMobile ? '0.75rem' : '0.875rem'
+            }
+          }}
+        >
           {steps.map((label) => (
             <Step key={label}>
-              <StepLabel>{label}</StepLabel>
+              <StepLabel>{isMobile ? '' : label}</StepLabel>
             </Step>
           ))}
         </Stepper>
 
+        {errors.general && (
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3,
+              fontSize: isMobile ? '0.8rem' : '0.875rem'
+            }}
+          >
+            {errors.general}
+          </Alert>
+        )}
+
         {renderStepContent(activeStep)}
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-          {activeStep === 0 ? (
+        {activeStep < 2 && (
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? 2 : 0,
+              pt: isMobile ? 3 : 4 
+            }}
+          >
             <Button
-              variant="outlined"
-              onClick={() => navigate('/customer-login')}
+              disabled={activeStep === 0}
+              onClick={handleBack}
+              sx={{ 
+                mr: isMobile ? 0 : 1,
+                order: isMobile ? 2 : 1,
+                minHeight: isMobile ? '48px' : '56px'
+              }}
             >
-              Giriş Sayfasına Dön
-            </Button>
-          ) : activeStep < 2 ? (
-            <Button onClick={handleBack}>
               Geri
             </Button>
-          ) : (
-            <Button
-              variant="outlined"
-              onClick={() => navigate('/customer-login')}
-            >
-              Giriş Sayfasına Git
-            </Button>
-          )}
+            <Box sx={{ flex: '1 1 auto' }} />
+            {activeStep === steps.length - 2 ? (
+              <Button
+                variant="contained"
+                onClick={handleSubmit}
+                disabled={loading}
+                sx={{ 
+                  order: isMobile ? 1 : 2,
+                  minHeight: isMobile ? '48px' : '56px',
+                  fontSize: isMobile ? '0.9rem' : '1rem'
+                }}
+              >
+                {loading ? 'Kaydediliyor...' : 'Hesap Oluştur'}
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                sx={{ 
+                  order: isMobile ? 1 : 2,
+                  minHeight: isMobile ? '48px' : '56px',
+                  fontSize: isMobile ? '0.9rem' : '1rem'
+                }}
+              >
+                İleri
+              </Button>
+            )}
+          </Box>
+        )}
 
-          {activeStep === 0 && (
-            <Button
-              variant="contained"
-              onClick={handleNext}
-            >
-              İleri
-            </Button>
-          )}
-
-          {activeStep === 1 && (
-            <Button
-              variant="contained"
-              onClick={handleSubmit}
-              disabled={loading}
-            >
-              {loading ? 'Kaydediliyor...' : 'Hesap Oluştur'}
-            </Button>
-          )}
+        <Box textAlign="center" mt={isMobile ? 3 : 4}>
+          <Button
+            variant="text"
+            onClick={() => navigate('/customer-login')}
+            sx={{ 
+              color: 'text.secondary',
+              fontSize: isMobile ? '0.8rem' : '0.9rem',
+              minHeight: isMobile ? '36px' : '40px'
+            }}
+          >
+            Zaten hesabınız var mı? Giriş yapın
+          </Button>
         </Box>
       </Paper>
     </Container>

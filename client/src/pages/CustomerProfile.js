@@ -20,7 +20,11 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon
+  ListItemIcon,
+  useTheme,
+  useMediaQuery,
+  IconButton,
+  Stack
 } from '@mui/material';
 import {
   Person,
@@ -31,7 +35,8 @@ import {
   Error,
   ShoppingCart,
   Payment,
-  Info
+  Info,
+  ExitToApp
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { customerAPI } from '../services/api';
@@ -43,6 +48,8 @@ const CustomerProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   useEffect(() => {
     const customerData = localStorage.getItem('customer');
@@ -86,11 +93,11 @@ const CustomerProfile = () => {
     const due = new Date(dueDate);
     
     if (status === 'paid') {
-      return <CheckCircle sx={{ color: 'success.main' }} />;
+      return <CheckCircle sx={{ color: 'success.main', fontSize: '1rem' }} />;
     } else if (due < today) {
-      return <Error sx={{ color: 'error.main' }} />;
+      return <Error sx={{ color: 'error.main', fontSize: '1rem' }} />;
     } else {
-      return <Warning sx={{ color: 'warning.main' }} />;
+      return <Warning sx={{ color: 'warning.main', fontSize: '1rem' }} />;
     }
   };
 
@@ -122,7 +129,7 @@ const CustomerProfile = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth="lg" sx={{ py: 2 }}>
         <Typography>Yükleniyor...</Typography>
       </Container>
     );
@@ -133,269 +140,362 @@ const CustomerProfile = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Container 
+      maxWidth="lg" 
+      sx={{ 
+        py: isMobile ? 1 : 3,
+        px: isMobile ? 0.5 : 2,
+        minHeight: '100vh'
+      }}
+    >
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Box display="flex" alignItems="center">
-          <img 
-            src="/logo.png" 
-            alt="Marka World" 
-            style={{ height: '50px', marginRight: '16px' }}
-          />
-          <Typography variant="h4" component="h1">
-            Müşteri Paneli
-          </Typography>
-        </Box>
-        <Button variant="outlined" onClick={handleLogout}>
-          Çıkış Yap
-        </Button>
-      </Box>
+      <Paper 
+        elevation={1}
+        sx={{ 
+          p: isMobile ? 1.5 : 2, 
+          mb: isMobile ? 1.5 : 2,
+          borderRadius: isMobile ? 1 : 2
+        }}
+      >
+        <Stack 
+          direction={isMobile ? "column" : "row"}
+          justifyContent="space-between" 
+          alignItems={isMobile ? "stretch" : "center"}
+          spacing={isMobile ? 1.5 : 2}
+        >
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <img 
+              src="/logo.png" 
+              alt="Marka World" 
+              style={{ 
+                height: isMobile ? '32px' : '40px'
+              }}
+            />
+            <Typography 
+              variant={isMobile ? "h6" : "h5"} 
+              component="h1"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Müşteri Paneli
+            </Typography>
+          </Stack>
+          <Button 
+            variant={isMobile ? "contained" : "outlined"}
+            onClick={handleLogout}
+            size={isMobile ? "small" : "medium"}
+            startIcon={<ExitToApp />}
+            sx={{ 
+              minWidth: isMobile ? '100%' : 'auto',
+              fontSize: isMobile ? '0.8rem' : '0.9rem'
+            }}
+          >
+            Çıkış Yap
+          </Button>
+        </Stack>
+      </Paper>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert 
+          severity="error" 
+          sx={{ 
+            mb: 2,
+            fontSize: '0.8rem'
+          }}
+        >
           {error}
         </Alert>
       )}
 
-      <Grid container spacing={3}>
-        {/* Kişisel Bilgiler */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={2}>
-                <Person sx={{ mr: 1 }} />
-                <Typography variant="h6">Kişisel Bilgiler</Typography>
-              </Box>
-              <List dense>
-                <ListItem>
-                  <ListItemText primary="Ad Soyad" secondary={customer.name} />
-                </ListItem>
-                <ListItem>
-                  <ListItemText primary="TC Kimlik No" secondary={customer.tc_no} />
-                </ListItem>
-                <ListItem>
-                  <ListItemText primary="Telefon" secondary={customer.phone} />
-                </ListItem>
-                <ListItem>
-                  <ListItemText primary="Email" secondary={customer.email} />
-                </ListItem>
-                {customer.birth_date && (
-                  <ListItem>
-                    <ListItemText 
-                      primary="Doğum Tarihi" 
-                      secondary={new Date(customer.birth_date).toLocaleDateString('tr-TR')} 
-                    />
-                  </ListItem>
-                )}
-                {customer.address && (
-                  <ListItem>
-                    <ListItemText primary="Adres" secondary={customer.address} />
-                  </ListItem>
-                )}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
+      <Stack spacing={isMobile ? 1.5 : 2}>
+        {/* Kişisel ve Kredi Bilgileri */}
+        <Grid container spacing={isMobile ? 1.5 : 2}>
+          {/* Kişisel Bilgiler */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent sx={{ p: isMobile ? 1.5 : 2 }}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+                  <Person sx={{ fontSize: '1.2rem' }} />
+                  <Typography 
+                    variant="subtitle1"
+                    sx={{ fontWeight: 'bold', fontSize: isMobile ? '0.9rem' : '1rem' }}
+                  >
+                    Kişisel Bilgiler
+                  </Typography>
+                </Stack>
+                <Stack spacing={isMobile ? 0.5 : 1}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                      Ad Soyad
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                      {customer.name}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                      TC Kimlik No
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                      {customer.tc_no}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                      Telefon
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                      {customer.phone}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                      Email
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                      {customer.email}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
 
-        {/* Kredi Bilgileri */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={2}>
-                <CreditCard sx={{ mr: 1 }} />
-                <Typography variant="h6">Kredi Bilgileri</Typography>
-              </Box>
-              <List dense>
-                <ListItem>
-                  <ListItemText 
-                    primary="Kredi Limiti" 
-                    secondary={`${customer.credit_limit?.toLocaleString('tr-TR')}₺`} 
+          {/* Kredi Bilgileri */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent sx={{ p: isMobile ? 1.5 : 2 }}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+                  <CreditCard sx={{ fontSize: '1.2rem' }} />
+                  <Typography 
+                    variant="subtitle1"
+                    sx={{ fontWeight: 'bold', fontSize: isMobile ? '0.9rem' : '1rem' }}
+                  >
+                    Kredi Bilgileri
+                  </Typography>
+                </Stack>
+                <Box textAlign="center" py={1}>
+                  <Typography 
+                    variant={isMobile ? "h5" : "h4"} 
+                    color="primary" 
+                    gutterBottom
+                    sx={{ fontWeight: 'bold' }}
+                  >
+                    {customer.credit_limit?.toLocaleString('tr-TR')}₺
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary"
+                    sx={{ fontSize: '0.8rem' }}
+                  >
+                    Kredi Limitiniz
+                  </Typography>
+                  <Chip 
+                    label={customer.status === 'active' ? 'Aktif' : 'Pasif'}
+                    color={customer.status === 'active' ? 'success' : 'error'}
+                    size="small"
+                    sx={{ mt: 1 }}
                   />
-                </ListItem>
-                <ListItem>
-                  <ListItemText 
-                    primary="Mevcut Borç" 
-                    secondary={`${customer.current_debt?.toLocaleString('tr-TR') || '0'}₺`} 
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemText 
-                    primary="Kullanılabilir Limit" 
-                    secondary={`${((customer.credit_limit || 0) - (customer.current_debt || 0)).toLocaleString('tr-TR')}₺`} 
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemText 
-                    primary="Hesap Durumu" 
-                    secondary={
-                      <Chip 
-                        label={customer.status === 'active' ? 'Aktif' : 'Pasif'} 
-                        color={customer.status === 'active' ? 'success' : 'default'}
-                        size="small"
-                      />
-                    } 
-                  />
-                </ListItem>
-              </List>
-            </CardContent>
-          </Card>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
 
         {/* Ödeme Bilgileri */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={2}>
-                <AccountBalance sx={{ mr: 1 }} />
-                <Typography variant="h6">Ödeme Bilgileri</Typography>
-              </Box>
-              <Alert severity="info" sx={{ mb: 2 }}>
-                <Typography variant="body2">
-                  <strong>Önemli:</strong> Taksit ödemelerinizi aşağıdaki hesap bilgilerine yapabilirsiniz.
-                </Typography>
-              </Alert>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>Şirket Bilgileri</Typography>
-                  <Typography variant="body2">MARKA WORLD GİYİM LTD. ŞTİ.</Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>Banka Bilgileri</Typography>
-                  <Typography variant="body2">Türkiye İş Bankası - Merkez Şubesi</Typography>
-                  <Typography variant="body2">IBAN: TR12 3456 7890 1234 5678 9012 34</Typography>
-                </Grid>
-              </Grid>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Ödeme yaparken açıklama kısmına TC Kimlik numaranızı yazınız.
+        <Card>
+          <CardContent sx={{ p: isMobile ? 1.5 : 2 }}>
+            <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+              <AccountBalance sx={{ fontSize: '1.2rem' }} />
+              <Typography 
+                variant="subtitle1"
+                sx={{ fontWeight: 'bold', fontSize: isMobile ? '0.9rem' : '1rem' }}
+              >
+                Ödeme Bilgileri
               </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+            </Stack>
+            <Alert 
+              severity="info" 
+              sx={{ 
+                mb: 1.5,
+                fontSize: '0.75rem',
+                '& .MuiAlert-message': {
+                  fontSize: '0.75rem'
+                }
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                Ödeme Talimatları:
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.7rem' }}>
+                • Ödemelerinizi aşağıdaki IBAN'a yapabilirsiniz<br/>
+                • Ödeme açıklamasına TC kimlik numaranızı yazınız<br/>
+                • Ödeme makbuzunu WhatsApp ile gönderiniz
+              </Typography>
+            </Alert>
+            <Grid container spacing={isMobile ? 1 : 1.5}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  Şirket
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                  MARKA WORLD GİYİM LTD. ŞTİ.
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  IBAN
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: 'bold',
+                    fontSize: '0.8rem',
+                    fontFamily: 'monospace',
+                    wordBreak: 'break-all'
+                  }}
+                >
+                  TR12 3456 7890 1234 5678 9012 34
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  Banka
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                  Türkiye İş Bankası - Merkez Şubesi
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  WhatsApp
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                  0555 123 45 67
+                </Typography>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
 
         {/* Taksit Tablosu */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={2}>
-                <Payment sx={{ mr: 1 }} />
-                <Typography variant="h6">Taksit Takibi</Typography>
-              </Box>
-              {installments.length > 0 ? (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Durum</TableCell>
-                        <TableCell>Taksit No</TableCell>
-                        <TableCell>Tutar</TableCell>
-                        <TableCell>Vade Tarihi</TableCell>
-                        <TableCell>Ödeme Tarihi</TableCell>
-                        <TableCell>Satış Tutarı</TableCell>
+        <Card>
+          <CardContent sx={{ p: isMobile ? 1 : 2 }}>
+            <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+              <Payment sx={{ fontSize: '1.2rem' }} />
+              <Typography 
+                variant="subtitle1"
+                sx={{ fontWeight: 'bold', fontSize: isMobile ? '0.9rem' : '1rem' }}
+              >
+                Taksit Durumu
+              </Typography>
+            </Stack>
+            
+            {installments.length === 0 ? (
+              <Alert severity="info" sx={{ fontSize: '0.8rem' }}>
+                Henüz taksitli alışverişiniz bulunmamaktadır.
+              </Alert>
+            ) : (
+              <TableContainer component={Paper} elevation={0} sx={{ maxHeight: isMobile ? 300 : 400 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 'bold', py: 1 }}>
+                        Taksit
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 'bold', py: 1 }}>
+                        Tutar
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 'bold', py: 1 }}>
+                        Vade
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 'bold', py: 1 }}>
+                        Durum
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {installments.map((installment, index) => (
+                      <TableRow key={installment.id}>
+                        <TableCell sx={{ fontSize: '0.7rem', py: 0.5 }}>
+                          {index + 1}. Taksit
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.7rem', fontWeight: 'bold', py: 0.5 }}>
+                          {installment.amount?.toLocaleString('tr-TR')}₺
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.7rem', py: 0.5 }}>
+                          {new Date(installment.due_date).toLocaleDateString('tr-TR')}
+                        </TableCell>
+                        <TableCell sx={{ py: 0.5 }}>
+                          <Stack direction="row" alignItems="center" spacing={0.5}>
+                            {getInstallmentStatusIcon(installment.status, installment.due_date)}
+                            <Chip
+                              label={getInstallmentStatusText(installment.status, installment.due_date)}
+                              color={getInstallmentStatusColor(installment.status, installment.due_date)}
+                              size="small"
+                              sx={{ fontSize: '0.6rem', height: '20px' }}
+                            />
+                          </Stack>
+                        </TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {installments.map((installment) => (
-                        <TableRow key={installment.id}>
-                          <TableCell>
-                            <Box display="flex" alignItems="center">
-                              {getInstallmentStatusIcon(installment.status, installment.due_date)}
-                              <Chip
-                                label={getInstallmentStatusText(installment.status, installment.due_date)}
-                                color={getInstallmentStatusColor(installment.status, installment.due_date)}
-                                size="small"
-                                sx={{ ml: 1 }}
-                              />
-                            </Box>
-                          </TableCell>
-                          <TableCell>{installment.installment_number}</TableCell>
-                          <TableCell>{installment.amount?.toLocaleString('tr-TR')}₺</TableCell>
-                          <TableCell>
-                            {new Date(installment.due_date).toLocaleDateString('tr-TR')}
-                          </TableCell>
-                          <TableCell>
-                            {installment.paid_date 
-                              ? new Date(installment.paid_date).toLocaleDateString('tr-TR')
-                              : '-'
-                            }
-                          </TableCell>
-                          <TableCell>{installment.sale_total?.toLocaleString('tr-TR')}₺</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Alert severity="info">
-                  Henüz taksitli alışverişiniz bulunmuyor.
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Alışveriş Geçmişi */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={2}>
-                <ShoppingCart sx={{ mr: 1 }} />
-                <Typography variant="h6">Alışveriş Geçmişi</Typography>
-              </Box>
-              {sales.length > 0 ? (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Tarih</TableCell>
-                        <TableCell>Tutar</TableCell>
-                        <TableCell>Taksit Sayısı</TableCell>
-                        <TableCell>Faizli Toplam</TableCell>
-                        <TableCell>Aylık Ödeme</TableCell>
-                        <TableCell>Durum</TableCell>
-                        <TableCell>Ödenen/Toplam</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {sales.map((sale) => (
-                        <TableRow key={sale.id}>
-                          <TableCell>
-                            {new Date(sale.created_at).toLocaleDateString('tr-TR')}
-                          </TableCell>
-                          <TableCell>{sale.total_amount?.toLocaleString('tr-TR')}₺</TableCell>
-                          <TableCell>{sale.installment_count}</TableCell>
-                          <TableCell>{sale.total_with_interest?.toLocaleString('tr-TR')}₺</TableCell>
-                          <TableCell>{sale.installment_amount?.toLocaleString('tr-TR')}₺</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={
-                                sale.status === 'approved' ? 'Onaylandı' :
-                                sale.status === 'pending_approval' ? 'Onay Bekliyor' :
-                                sale.status === 'completed' ? 'Tamamlandı' : 'İptal'
-                              }
-                              color={
-                                sale.status === 'approved' || sale.status === 'completed' ? 'success' :
-                                sale.status === 'pending_approval' ? 'warning' : 'default'
-                              }
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {sale.paid_installments || 0} / {sale.total_installments || 0}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Alert severity="info">
-                  Henüz alışveriş geçmişiniz bulunmuyor.
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+        <Card>
+          <CardContent sx={{ p: isMobile ? 1.5 : 2 }}>
+            <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+              <ShoppingCart sx={{ fontSize: '1.2rem' }} />
+              <Typography 
+                variant="subtitle1"
+                sx={{ fontWeight: 'bold', fontSize: isMobile ? '0.9rem' : '1rem' }}
+              >
+                Alışveriş Geçmişi
+              </Typography>
+            </Stack>
+            
+            {sales.length === 0 ? (
+              <Alert severity="info" sx={{ fontSize: '0.8rem' }}>
+                Henüz alışverişiniz bulunmamaktadır.
+              </Alert>
+            ) : (
+              <Grid container spacing={1}>
+                {sales.map((sale) => (
+                  <Grid item xs={12} sm={6} md={4} key={sale.id}>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent sx={{ p: 1.5 }}>
+                        <Typography 
+                          variant="h6" 
+                          gutterBottom
+                          sx={{ fontSize: '1rem', fontWeight: 'bold' }}
+                        >
+                          {sale.total_amount?.toLocaleString('tr-TR')}₺
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                          {sale.installment_count} Taksit
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                          {new Date(sale.created_at).toLocaleDateString('tr-TR')}
+                        </Typography>
+                        <Chip
+                          label={sale.status === 'approved' ? 'Onaylandı' : 'Bekliyor'}
+                          color={sale.status === 'approved' ? 'success' : 'warning'}
+                          size="small"
+                          sx={{ mt: 1, fontSize: '0.65rem' }}
+                        />
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </CardContent>
+        </Card>
+      </Stack>
     </Container>
   );
 };
