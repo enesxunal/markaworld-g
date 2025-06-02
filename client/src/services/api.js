@@ -50,6 +50,9 @@ export const customerAPI = {
   // Email onay
   verifyEmail: (token) => api.get(`/customers/verify-email/${token}`),
   
+  // Sözleşme onayı ve kayıt tamamlama
+  completeRegistration: (token, agreements) => api.post(`/customers/complete-registration/${token}`, agreements),
+  
   // Müşteri satışları
   getSales: (customerId) => api.get(`/customers/${customerId}/sales`),
   
@@ -86,6 +89,18 @@ export const systemAPI = {
   
   // Manuel günlük kontroller
   runDailyChecks: () => api.post('/admin/run-daily-checks'),
+};
+
+// Admin API'leri
+export const adminAPI = {
+  // Admin giriş
+  login: (credentials) => api.post('/admin/login', credentials),
+  
+  // Admin çıkış
+  logout: () => api.post('/admin/logout'),
+  
+  // Admin profil
+  getProfile: () => api.get('/admin/profile'),
 };
 
 export default api; 

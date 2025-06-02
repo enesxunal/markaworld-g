@@ -165,6 +165,17 @@ const CustomerLogin = () => {
             Hesabınız yok mu? Yukarıdaki "Yeni Hesap Oluştur" butonunu kullanın.
           </Typography>
         </Box>
+
+        <Box textAlign="center" mt={2}>
+          <Button
+            variant="text"
+            size="small"
+            onClick={() => navigate('/admin-login')}
+            sx={{ color: 'text.secondary', fontSize: '0.8rem' }}
+          >
+            Admin Paneli
+          </Button>
+        </Box>
       </Paper>
     </Container>
   );

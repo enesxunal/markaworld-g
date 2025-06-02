@@ -11,12 +11,27 @@ const cronService = require('./services/cronService');
 const customersRouter = require('./routes/customers');
 const salesRouter = require('./routes/sales');
 const emailRouter = require('./routes/email');
+const adminRouter = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// OPTIONS requests için explicit handler
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.sendStatus(200);
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -24,6 +39,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/customers', customersRouter);
 app.use('/api/sales', salesRouter);
 app.use('/api/email', emailRouter);
+app.use('/api/admin', adminRouter);
 
 // Sistem durumu
 app.get('/api/health', (req, res) => {

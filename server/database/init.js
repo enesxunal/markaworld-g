@@ -46,6 +46,10 @@ const initDatabase = () => {
       db.run(`ALTER TABLE customers ADD COLUMN email_verified INTEGER DEFAULT 0`, () => {});
       db.run(`ALTER TABLE customers ADD COLUMN verification_token TEXT`, () => {});
       db.run(`ALTER TABLE customers ADD COLUMN password TEXT`, () => {});
+      db.run(`ALTER TABLE customers ADD COLUMN kvkk_approved INTEGER DEFAULT 0`, () => {});
+      db.run(`ALTER TABLE customers ADD COLUMN contract_approved INTEGER DEFAULT 0`, () => {});
+      db.run(`ALTER TABLE customers ADD COLUMN electronic_approved INTEGER DEFAULT 0`, () => {});
+      db.run(`ALTER TABLE customers ADD COLUMN agreement_date DATETIME`, () => {});
 
       // Satışlar tablosu
       db.run(`
@@ -117,6 +121,21 @@ const initDatabase = () => {
           value TEXT NOT NULL,
           description TEXT,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Müşteri sözleşme onayları tablosu
+      db.run(`
+        CREATE TABLE IF NOT EXISTS customer_agreements (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          kvkk_approved INTEGER DEFAULT 0,
+          contract_approved INTEGER DEFAULT 0,
+          electronic_approved INTEGER DEFAULT 0,
+          ip_address TEXT,
+          user_agent TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (customer_id) REFERENCES customers (id)
         )
       `, (err) => {
         if (err) {
@@ -266,6 +285,74 @@ const insertDefaultEmailTemplates = () => {
           </div>
         `,
         variables: 'CUSTOMER_NAME,DUE_DATE,AMOUNT,CURRENT_LIMIT,COMPANY_NAME'
+      },
+      {
+        name: 'customer_activation',
+        subject: 'Hesabınız Aktifleştirildi - {{COMPANY_NAME}}',
+        html_content: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px;">
+            <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #000000; margin: 0;">{{COMPANY_NAME}}</h1>
+                <div style="font-size: 48px; margin: 20px 0;">🎉</div>
+              </div>
+              
+              <h2 style="color: #4CAF50; text-align: center;">Hesabınız Başarıyla Aktifleştirildi!</h2>
+              
+              <p style="color: #333333; line-height: 1.6;">
+                <strong>Sayın {{CUSTOMER_NAME}},</strong>
+              </p>
+              
+              <p style="color: #333333; line-height: 1.6;">
+                Tebrikler! Tüm sözleşmeleri onayladınız ve hesabınız başarıyla aktifleştirildi. 
+                Artık {{COMPANY_NAME}}'da taksitli alışveriş yapabilir ve müşteri panelinize erişebilirsiniz.
+              </p>
+              
+              <div style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4CAF50;">
+                <h3 style="color: #2e7d32; margin-top: 0;">Hesap Bilgileriniz:</h3>
+                <ul style="color: #333333; line-height: 1.8; margin: 0; padding-left: 20px;">
+                  <li><strong>Kredi Limitiniz:</strong> {{CREDIT_LIMIT}}₺</li>
+                  <li><strong>Hesap Durumu:</strong> Aktif</li>
+                  <li><strong>Email:</strong> {{CUSTOMER_EMAIL}}</li>
+                  <li><strong>Taksit Seçenekleri:</strong> 3 ve 5 taksit</li>
+                </ul>
+              </div>
+              
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #000000; margin-top: 0;">Artık Neler Yapabilirsiniz:</h3>
+                <ul style="color: #333333; line-height: 1.6;">
+                  <li>✅ Taksitli alışveriş yapabilirsiniz</li>
+                  <li>✅ Ödeme planlarınızı takip edebilirsiniz</li>
+                  <li>✅ Düzenli ödemelerle limitinizi artırabilirsiniz</li>
+                  <li>✅ Email bildirimleri alabilirsiniz</li>
+                  <li>✅ Müşteri panelinize erişebilirsiniz</li>
+                </ul>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="{{FRONTEND_URL}}/customer-login" 
+                   style="background-color: #000000; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 500; display: inline-block;">
+                  GİRİŞ YAP
+                </a>
+              </div>
+              
+              <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+                <p style="color: #856404; margin: 0; font-size: 14px;">
+                  <strong>Önemli:</strong> Giriş bilgileriniz email adresiniz ve kayıt sırasında belirlediğiniz şifredir.
+                </p>
+              </div>
+              
+              <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+              
+              <p style="color: #666666; font-size: 12px; text-align: center; margin: 0;">
+                {{COMPANY_NAME}} - Müşteri Hizmetleri<br>
+                Bu mail otomatik olarak gönderilmiştir.<br>
+                Sorularınız için: info@markaworld.com.tr
+              </p>
+            </div>
+          </div>
+        `,
+        variables: 'CUSTOMER_NAME,CUSTOMER_EMAIL,CREDIT_LIMIT,COMPANY_NAME,FRONTEND_URL'
       }
     ];
 

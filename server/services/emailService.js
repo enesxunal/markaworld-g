@@ -148,6 +148,19 @@ class EmailService {
 
     return this.sendEmail(customer.email, 'payment_overdue', variables);
   }
+
+  // Müşteri aktivasyon emaili
+  async sendCustomerActivationEmail(customer) {
+    const variables = {
+      CUSTOMER_NAME: customer.name,
+      CUSTOMER_EMAIL: customer.email,
+      CREDIT_LIMIT: customer.credit_limit,
+      COMPANY_NAME: process.env.COMPANY_NAME || 'Marka World',
+      FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000'
+    };
+
+    return this.sendEmail(customer.email, 'customer_activation', variables);
+  }
 }
 
 module.exports = new EmailService(); 

@@ -54,7 +54,10 @@ function Layout() {
   };
 
   const handleLogout = () => {
-    navigate('/customer-login');
+    // Admin token'ını temizle
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    navigate('/admin-login');
   };
 
   const drawer = (
@@ -115,7 +118,7 @@ function Layout() {
             startIcon={<ExitToAppIcon />}
             onClick={handleLogout}
           >
-            Müşteri Paneli
+            Çıkış Yap
           </Button>
         </Toolbar>
       </AppBar>

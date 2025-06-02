@@ -85,14 +85,19 @@ router.post('/register', [
   body('birth_date').optional().isDate().withMessage('Geçerli doğum tarihi girin'),
   body('address').optional()
 ], async (req, res) => {
+  console.log('🔥 Register endpoint çağrıldı!');
+  console.log('📝 Request body:', req.body);
+  
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('❌ Validation hatası:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
 
   const { name, tc_no, phone, email, password, birth_date, address } = req.body;
 
   try {
+    console.log('🔍 TC No ve email kontrolü yapılıyor...');
     // TC No benzersizlik kontrolü
     const existingCustomer = await new Promise((resolve, reject) => {
       db.get('SELECT id FROM customers WHERE tc_no = ? OR email = ?', [tc_no, email], (err, row) => {
@@ -102,11 +107,13 @@ router.post('/register', [
     });
 
     if (existingCustomer) {
+      console.log('❌ Müşteri zaten var:', existingCustomer);
       return res.status(400).json({ 
         error: 'Bu TC Kimlik No veya email adresi ile kayıtlı müşteri zaten var' 
       });
     }
 
+    console.log('🔐 Şifre hash\'leniyor...');
     // Şifreyi hash'le
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -114,6 +121,7 @@ router.post('/register', [
     // Verification token oluştur
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
+    console.log('💾 Müşteri veritabanına kaydediliyor...');
     // Müşteriyi kaydet (pending durumunda)
     const customerId = await new Promise((resolve, reject) => {
       const query = `
@@ -141,17 +149,22 @@ router.post('/register', [
       });
     });
 
+    console.log('✅ Müşteri kaydedildi, ID:', customerId);
+
+    console.log('📧 Onay emaili gönderiliyor...');
     // Onay emaili gönder
     try {
       await emailService.sendCustomerRegistrationEmail(
         { id: customerId, name, email },
         verificationToken
       );
+      console.log('✅ Email başarıyla gönderildi');
     } catch (emailError) {
-      console.error('Email gönderme hatası:', emailError);
+      console.error('❌ Email gönderme hatası:', emailError);
       // Email hatası olsa bile kayıt tamamlanmış sayılır
     }
 
+    console.log('🎉 Kayıt işlemi tamamlandı!');
     res.status(201).json({
       success: true,
       message: 'Kayıt başarılı! Email adresinize gönderilen onay linkine tıklayarak hesabınızı aktifleştirin.',
@@ -159,7 +172,7 @@ router.post('/register', [
     });
 
   } catch (error) {
-    console.error('Kayıt hatası:', error);
+    console.error('💥 Kayıt hatası:', error);
     res.status(500).json({ error: 'Kayıt sırasında bir hata oluştu' });
   }
 });
@@ -183,15 +196,16 @@ router.get('/verify-email/:token', async (req, res) => {
 
     if (!customer) {
       return res.status(400).json({ 
+        success: false,
         error: 'Geçersiz veya süresi dolmuş onay linki' 
       });
     }
 
-    // Müşteriyi aktifleştir
+    // Email'i onaylandı olarak işaretle (ama henüz aktifleştirme)
     await new Promise((resolve, reject) => {
       db.run(
-        'UPDATE customers SET email_verified = 1, status = ?, verification_token = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        ['active', customer.id],
+        'UPDATE customers SET email_verified = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [customer.id],
         function(err) {
           if (err) reject(err);
           else resolve();
@@ -199,81 +213,21 @@ router.get('/verify-email/:token', async (req, res) => {
       );
     });
 
-    // Başarı sayfası HTML'i
-    const html = `
-      <!DOCTYPE html>
-      <html lang="tr">
-      <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Hesap Onaylandı - Marka World</title>
-          <style>
-              body { 
-                  font-family: Arial, sans-serif; 
-                  max-width: 600px; 
-                  margin: 50px auto; 
-                  padding: 20px;
-                  background-color: #f5f5f5;
-              }
-              .container {
-                  background: white;
-                  padding: 40px;
-                  border-radius: 12px;
-                  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-                  text-align: center;
-              }
-              .success-icon {
-                  font-size: 64px;
-                  color: #4CAF50;
-                  margin-bottom: 20px;
-              }
-              .btn {
-                  background-color: #000000;
-                  color: white;
-                  padding: 15px 30px;
-                  border: none;
-                  border-radius: 8px;
-                  font-size: 16px;
-                  text-decoration: none;
-                  display: inline-block;
-                  margin: 20px 10px;
-                  cursor: pointer;
-              }
-              .btn:hover { background-color: #333333; }
-              h1 { color: #000000; }
-              p { color: #666666; line-height: 1.6; }
-          </style>
-      </head>
-      <body>
-          <div class="container">
-              <div class="success-icon">✅</div>
-              <h1>Hesabınız Başarıyla Onaylandı!</h1>
-              <p>Sayın <strong>${customer.name}</strong>,</p>
-              <p>Email adresiniz doğrulandı ve hesabınız aktifleştirildi. Artık taksitli alışveriş yapabilir ve müşteri panelinize erişebilirsiniz.</p>
-              
-              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                  <h3 style="color: #000000; margin-top: 0;">Hesap Bilgileriniz:</h3>
-                  <p><strong>Kredi Limitiniz:</strong> 5.000₺</p>
-                  <p><strong>Hesap Durumu:</strong> Aktif</p>
-              </div>
-              
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/customer-login" class="btn">
-                  GİRİŞ YAP
-              </a>
-              
-              <p style="margin-top: 30px; font-size: 14px;">
-                  Giriş bilgileriniz: Email adresiniz ve şifreniz
-              </p>
-          </div>
-      </body>
-      </html>
-    `;
-
-    res.send(html);
+    // Müşteri bilgilerini döndür (şifre hariç)
+    const { password, verification_token, ...customerData } = customer;
+    
+    res.json({
+      success: true,
+      message: 'Email başarıyla onaylandı',
+      customer: customerData
+    });
 
   } catch (error) {
     console.error('Email onay hatası:', error);
-    res.status(500).json({ error: 'Onay sırasında bir hata oluştu' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Onay sırasında bir hata oluştu' 
+    });
   }
 });
 
@@ -602,6 +556,110 @@ router.post('/activate/:id', (req, res) => {
       res.json({ message: 'Müşteri başarıyla aktifleştirildi' });
     }
   );
+});
+
+// Sözleşme onayı ve kayıt tamamlama
+router.post('/complete-registration/:token', async (req, res) => {
+  const verificationToken = req.params.token;
+  const { kvkk, contract, electronic } = req.body;
+
+  try {
+    // Tüm sözleşmelerin onaylandığını kontrol et
+    if (!kvkk || !contract || !electronic) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tüm sözleşmeleri onaylamanız gerekmektedir'
+      });
+    }
+
+    // Token ile müşteriyi bul
+    const customer = await new Promise((resolve, reject) => {
+      db.get(
+        'SELECT * FROM customers WHERE verification_token = ? AND email_verified = 1',
+        [verificationToken],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+
+    if (!customer) {
+      return res.status(400).json({
+        success: false,
+        error: 'Geçersiz token veya email henüz onaylanmamış'
+      });
+    }
+
+    // Müşteriyi aktifleştir ve sözleşme onaylarını kaydet
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE customers SET 
+         status = 'active', 
+         verification_token = NULL, 
+         kvkk_approved = 1,
+         contract_approved = 1,
+         electronic_approved = 1,
+         agreement_date = CURRENT_TIMESTAMP,
+         updated_at = CURRENT_TIMESTAMP 
+         WHERE id = ?`,
+        [customer.id],
+        function(err) {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
+    });
+
+    // Sözleşme onay kaydını log'la
+    await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO customer_agreements 
+         (customer_id, kvkk_approved, contract_approved, electronic_approved, ip_address, user_agent, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [customer.id, 1, 1, 1, req.ip || 'unknown', req.get('User-Agent') || 'unknown'],
+        function(err) {
+          if (err) {
+            console.error('Sözleşme log hatası:', err);
+            // Log hatası olsa bile devam et
+          }
+          resolve();
+        }
+      );
+    });
+
+    // Onay emaili gönder
+    try {
+      await emailService.sendCustomerActivationEmail({
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        credit_limit: customer.credit_limit
+      });
+    } catch (emailError) {
+      console.error('Aktivasyon emaili gönderme hatası:', emailError);
+      // Email hatası olsa bile devam et
+    }
+
+    res.json({
+      success: true,
+      message: 'Hesabınız başarıyla aktifleştirildi',
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        credit_limit: customer.credit_limit,
+        status: 'active'
+      }
+    });
+
+  } catch (error) {
+    console.error('Sözleşme onay hatası:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Sözleşme onayı sırasında bir hata oluştu'
+    });
+  }
 });
 
 module.exports = router; 

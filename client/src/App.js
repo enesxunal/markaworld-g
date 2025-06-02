@@ -9,17 +9,20 @@ import theme from './theme';
 
 // Admin sayfaları
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
 import CustomerDetail from './pages/CustomerDetail';
 import Sales from './pages/Sales';
 import NewSale from './pages/NewSale';
 import SaleDetail from './pages/SaleDetail';
+import AdminLogin from './pages/AdminLogin';
 
 // Müşteri sayfaları
 import CustomerLogin from './pages/CustomerLogin';
 import CustomerRegister from './pages/CustomerRegister';
 import CustomerProfile from './pages/CustomerProfile';
+import EmailVerification from './pages/EmailVerification';
 
 function App() {
   return (
@@ -32,12 +35,20 @@ function App() {
             <Route path="/customer-login" element={<CustomerLogin />} />
             <Route path="/customer-register" element={<CustomerRegister />} />
             <Route path="/customer-profile" element={<CustomerProfile />} />
+            <Route path="/verify-email/:token" element={<EmailVerification />} />
+            
+            {/* Admin giriş */}
+            <Route path="/admin-login" element={<AdminLogin />} />
             
             {/* Ana sayfa yönlendirmesi */}
             <Route path="/" element={<Navigate to="/customer-login" replace />} />
             
-            {/* Admin rotaları */}
-            <Route path="/admin" element={<Layout />}>
+            {/* Admin rotaları - Korumalı */}
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }>
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="customers" element={<Customers />} />
