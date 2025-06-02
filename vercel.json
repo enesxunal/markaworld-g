@@ -7,20 +7,39 @@
       "config": {
         "distDir": "build"
       }
-    },
-    {
-      "src": "api/*.js",
-      "use": "@vercel/node"
     }
   ],
-  "routes": [
+  "functions": {
+    "api/hello.js": {
+      "runtime": "@vercel/node@latest"
+    },
+    "api/admin.js": {
+      "runtime": "@vercel/node@latest"
+    },
+    "api/customers.js": {
+      "runtime": "@vercel/node@latest"
+    },
+    "api/sales.js": {
+      "runtime": "@vercel/node@latest"
+    },
+    "api/email.js": {
+      "runtime": "@vercel/node@latest"
+    },
+    "api/health.js": {
+      "runtime": "@vercel/node@latest"
+    },
+    "api/test.js": {
+      "runtime": "@vercel/node@latest"
+    }
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     },
     {
-      "src": "/(.*)",
-      "dest": "/client/build/index.html"
+      "source": "/(.*)",
+      "destination": "/client/build/index.html"
     }
   ]
 } 
