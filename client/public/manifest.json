@@ -1,6 +1,6 @@
 {
   "short_name": "Marka World",
-  "name": "Marka World - Müşteri Takip Sistemi",
+  "name": "Marka World - Müşteri Ödeme Takip Sistemi",
   "icons": [
     {
       "src": "favicon.svg",
@@ -11,10 +11,17 @@
       "src": "logo.png",
       "type": "image/png",
       "sizes": "192x192"
+    },
+    {
+      "src": "logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#1976d2",
+  "background_color": "#ffffff",
+  "description": "Profesyonel müşteri ödeme takip sistemi",
+  "categories": ["business", "finance", "productivity"]
 }
