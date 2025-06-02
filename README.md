@@ -1,57 +1,58 @@
-# Marka World - Müşteri Ödeme Takip Sistemi
+# 🏪 Marka World - Müşteri Ödeme Takip Sistemi
 
-Giyim mağazaları için geliştirilmiş modern müşteri ödeme takip ve taksitli satış yönetim sistemi.
+Giyim mağazası için geliştirilmiş profesyonel müşteri ödeme takip sistemi. Taksitli satış, otomatik bildirimler ve tam mağaza yönetimi.
+
+## ✅ Vercel Deployment Güncellemesi (2025-06-02)
+
+**405 Hataları Düzeltildi:**
+- API Serverless Functions oluşturuldu
+- CORS ayarları düzeltildi  
+- Admin ve müşteri paneli çalışır durumda
+- Email sistemi aktif
+
+**Vercel URL:** [https://markaworld.vercel.app](https://markaworld.vercel.app)
+
+**Admin Giriş:**
+- Kullanıcı: `markaworld`
+- Şifre: `Marka60..`
+
+---
 
 ## 🚀 Özellikler
 
-### 👥 Müşteri Yönetimi
-- Müşteri kayıt ve giriş sistemi
-- Email onay sistemi
-- 3 aşamalı sözleşme onay süreci (KVKK, Taksitli Satış, Elektronik Onay)
-- Kredi limit yönetimi
-- Müşteri profil sayfası
+### 👨‍💼 Admin Paneli
+- **Müşteri Yönetimi** - Detaylı müşteri profilleri ve kredi takibi
+- **Satış Yönetimi** - Taksitli satış oluşturma ve takip
+- **Ödeme Takibi** - Otomatik taksit hatırlatmaları
+- **Raporlama** - Detaylı satış ve ödeme raporları
+- **Email Sistemi** - Otomatik bildirimler ve hatırlatmalar
 
-### 💳 Satış ve Taksit Yönetimi
-- Taksitli satış oluşturma (3 ve 5 taksit)
-- Otomatik taksit hesaplama
-- Email ile satış onay sistemi
-- Taksit ödeme takibi
-- Gecikme bildirimleri
+### 👥 Müşteri Paneli
+- **Hesap Oluşturma** - Email onaylı kayıt sistemi
+- **Profil Yönetimi** - Kişisel bilgi güncelleme
+- **Alışveriş Geçmişi** - Tüm satış kayıtları
+- **Taksit Takibi** - Ödeme durumu ve tarihleri
+- **Bildirimler** - Email ve SMS hatırlatmaları
 
-### 📧 Email Sistemi
-- Otomatik email bildirimleri
-- Kayıt onay emaili
-- Satış onay emaili
-- Hesap aktivasyon emaili
-- Ödeme hatırlatma emaili
-
-### 🔐 Admin Paneli
-- Güvenli admin girişi (JWT token)
-- Müşteri yönetimi
-- Satış yönetimi
-- Sistem durumu takibi
-
-### ⏰ Otomatik Sistemler
-- Günlük ödeme kontrolleri
-- Otomatik email bildirimleri
-- Cron job sistemi
-
-## 🛠️ Teknolojiler
+## 🛠️ Teknoloji Stack
 
 ### Backend
-- **Node.js** - Server runtime
+- **Node.js** - Sunucu teknolojisi
 - **Express.js** - Web framework
 - **SQLite** - Veritabanı
-- **Nodemailer** - Email servisi
 - **JWT** - Authentication
-- **Node-cron** - Zamanlanmış görevler
+- **Nodemailer** - Email servisi
+- **Bcrypt** - Şifre hashleme
 
-### Frontend
+### Frontend  
 - **React** - UI framework
 - **Material-UI** - Component library
-- **React Router** - Routing
 - **Axios** - HTTP client
-- **Day.js** - Date handling
+- **React Router** - Routing
+
+### Deployment
+- **Vercel** - Serverless deployment
+- **Git** - Version control
 
 ## 📦 Kurulum
 
