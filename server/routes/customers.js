@@ -43,6 +43,7 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   const customerId = req.params.id;
 
+  // Önce müşteri bilgilerini al
   db.get('SELECT * FROM customers WHERE id = ?', [customerId], (err, customer) => {
     if (err) {
       return res.status(500).json({ error: 'Müşteri getirilemedi' });
@@ -52,13 +53,14 @@ router.get('/:id', (req, res) => {
       return res.status(404).json({ error: 'Müşteri bulunamadı' });
     }
 
-    // Müşterinin satış geçmişini de getir
+    // Müşterinin satış geçmişini ve taksit bilgilerini getir
     const salesQuery = `
       SELECT s.*, 
         (SELECT COUNT(*) FROM installments WHERE sale_id = s.id AND status = 'paid') as paid_installments,
-        (SELECT COUNT(*) FROM installments WHERE sale_id = s.id) as total_installments
+        (SELECT COUNT(*) FROM installments WHERE sale_id = s.id) as total_installments,
+        (SELECT SUM(amount) FROM installments WHERE sale_id = s.id AND status = 'unpaid') as remaining_debt
       FROM sales s 
-      WHERE s.customer_id = ? 
+      WHERE s.customer_id = ? AND s.status = 'approved'
       ORDER BY s.created_at DESC
     `;
 
@@ -67,8 +69,12 @@ router.get('/:id', (req, res) => {
         return res.status(500).json({ error: 'Satış geçmişi getirilemedi' });
       }
 
+      // Toplam kalan borcu hesapla
+      const totalRemainingDebt = sales.reduce((total, sale) => total + (sale.remaining_debt || 0), 0);
+
       res.json({
         ...customer,
+        current_debt: totalRemainingDebt,
         sales
       });
     });
@@ -97,70 +103,87 @@ router.post('/register', [
   const { name, tc_no, phone, email, password, birth_date, address } = req.body;
 
   try {
-    console.log('🔍 TC No ve email kontrolü yapılıyor...');
-    // TC No benzersizlik kontrolü
+    // Email kontrolü
+    console.log('🔍 Email kontrolü yapılıyor:', email);
     const existingCustomer = await new Promise((resolve, reject) => {
-      db.get('SELECT id FROM customers WHERE tc_no = ? OR email = ?', [tc_no, email], (err, row) => {
-        if (err) reject(err);
+      db.get('SELECT * FROM customers WHERE email = ?', [email], (err, row) => {
+        if (err) {
+          console.error('❌ Email kontrolü hatası:', err);
+          reject(err);
+        }
         else resolve(row);
       });
     });
 
     if (existingCustomer) {
-      console.log('❌ Müşteri zaten var:', existingCustomer);
-      return res.status(400).json({ 
-        error: 'Bu TC Kimlik No veya email adresi ile kayıtlı müşteri zaten var' 
+      console.log('❌ Email zaten kayıtlı:', email);
+      return res.status(400).json({
+        success: false,
+        error: 'Bu email adresi zaten kayıtlı'
       });
     }
 
-    console.log('🔐 Şifre hash\'leniyor...');
-    // Şifreyi hash'le
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    // Verification token oluştur
+    // Şifreyi hashle
+    console.log('🔐 Şifre hashleniyor...');
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('✅ Şifre hashlendi');
+    
+    // Onay tokeni oluştur
+    console.log('🎲 Onay tokeni oluşturuluyor...');
     const verificationToken = crypto.randomBytes(32).toString('hex');
-
-    console.log('💾 Müşteri veritabanına kaydediliyor...');
-    // Müşteriyi kaydet (pending durumunda)
-    const customerId = await new Promise((resolve, reject) => {
-      const query = `
-        INSERT INTO customers (name, tc_no, phone, email, password, birth_date, address, credit_limit, status, email_verified, verification_token)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      const params = [
-        name,
-        tc_no,
-        phone,
-        email,
-        hashedPassword,
-        birth_date || null,
-        address || null,
-        5000, // Varsayılan kredi limiti
-        'pending', // Onay bekliyor
-        0, // Email onaylanmamış
-        verificationToken
-      ];
-
-      db.run(query, params, function(err) {
-        if (err) reject(err);
-        else resolve(this.lastID);
-      });
+    const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 saat
+    console.log('✅ Onay tokeni oluşturuldu:', {
+      token: verificationToken,
+      expiresAt: verificationTokenExpiresAt
     });
 
+    // Müşteriyi kaydet
+    console.log('💾 Müşteri kaydediliyor:', {
+      name,
+      tc_no,
+      phone,
+      email,
+      birth_date,
+      address,
+      verificationToken,
+      verificationTokenExpiresAt
+    });
+    const result = await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO customers (
+          name, tc_no, phone, email, password, birth_date, address, 
+          verification_token, verification_token_expires_at, status, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [name, tc_no, phone, email, hashedPassword, birth_date, address, verificationToken, verificationTokenExpiresAt.toISOString(), 'pending'],
+        function(err) {
+          if (err) reject(err);
+          else resolve(this.lastID);
+        }
+      );
+    });
+
+    const customerId = result;
     console.log('✅ Müşteri kaydedildi, ID:', customerId);
 
-    console.log('📧 Onay emaili gönderiliyor...');
     // Onay emaili gönder
     try {
-      await emailService.sendCustomerRegistrationEmail(
+      console.log('📧 Email gönderiliyor...');
+      console.log('📧 Email bilgileri:', {
+        id: customerId,
+        name,
+        email,
+        verificationToken
+      });
+      
+      const emailResult = await emailService.sendCustomerRegistrationEmail(
         { id: customerId, name, email },
         verificationToken
       );
-      console.log('✅ Email başarıyla gönderildi');
+      
+      console.log('✅ Email başarıyla gönderildi:', emailResult);
     } catch (emailError) {
       console.error('❌ Email gönderme hatası:', emailError);
+      console.error('❌ Hata detayı:', emailError.stack);
       // Email hatası olsa bile kayıt tamamlanmış sayılır
     }
 
@@ -173,6 +196,7 @@ router.post('/register', [
 
   } catch (error) {
     console.error('💥 Kayıt hatası:', error);
+    console.error('💥 Hata detayı:', error.stack);
     res.status(500).json({ error: 'Kayıt sırasında bir hata oluştu' });
   }
 });
@@ -185,7 +209,7 @@ router.get('/verify-email/:token', async (req, res) => {
     // Token ile müşteriyi bul
     const customer = await new Promise((resolve, reject) => {
       db.get(
-        'SELECT * FROM customers WHERE verification_token = ? AND email_verified = 0',
+        'SELECT * FROM customers WHERE verification_token = ? AND email_verified = 0 AND verification_token_expires_at > datetime("now")',
         [verificationToken],
         (err, row) => {
           if (err) reject(err);
@@ -396,47 +420,43 @@ router.delete('/:id', (req, res) => {
   );
 });
 
-// Müşteri kredi limitini artır (düzenli ödeme bonusu)
-router.post('/:id/increase-limit', (req, res) => {
-  const customerId = req.params.id;
+// Müşteri kredi limitini güncelle (manuel)
+router.post('/:id/increase-limit', [
+  body('new_limit').isFloat({ min: 0 }).withMessage('Yeni limit pozitif olmalı')
+], (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
 
-  // Ayarlardan artış oranını al
-  db.get('SELECT value FROM settings WHERE key = ?', ['limit_increase_rate'], (err, setting) => {
+  const customerId = req.params.id;
+  const { new_limit } = req.body;
+
+  // Müşterinin mevcut limitini al
+  db.get('SELECT credit_limit FROM customers WHERE id = ?', [customerId], (err, customer) => {
     if (err) {
-      return res.status(500).json({ error: 'Ayarlar getirilemedi' });
+      return res.status(500).json({ error: 'Müşteri bulunamadı' });
     }
 
-    const increaseRate = setting ? parseFloat(setting.value) : 20;
+    if (!customer) {
+      return res.status(404).json({ error: 'Müşteri bulunamadı' });
+    }
 
-    // Müşterinin mevcut limitini al
-    db.get('SELECT credit_limit FROM customers WHERE id = ?', [customerId], (err, customer) => {
-      if (err) {
-        return res.status(500).json({ error: 'Müşteri bulunamadı' });
-      }
-
-      if (!customer) {
-        return res.status(404).json({ error: 'Müşteri bulunamadı' });
-      }
-
-      const newLimit = customer.credit_limit * (1 + increaseRate / 100);
-
-      db.run(
-        'UPDATE customers SET credit_limit = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [newLimit, customerId],
-        function(err) {
-          if (err) {
-            return res.status(500).json({ error: 'Limit güncellenemedi' });
-          }
-
-          res.json({
-            message: 'Kredi limiti başarıyla artırıldı',
-            old_limit: customer.credit_limit,
-            new_limit: newLimit,
-            increase_rate: increaseRate
-          });
+    db.run(
+      'UPDATE customers SET credit_limit = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [new_limit, customerId],
+      function(err) {
+        if (err) {
+          return res.status(500).json({ error: 'Limit güncellenemedi' });
         }
-      );
-    });
+
+        res.json({
+          message: 'Kredi limiti başarıyla güncellendi',
+          old_limit: customer.credit_limit,
+          new_limit: new_limit
+        });
+      }
+    );
   });
 });
 
@@ -560,23 +580,15 @@ router.post('/activate/:id', (req, res) => {
 
 // Sözleşme onayı ve kayıt tamamlama
 router.post('/complete-registration/:token', async (req, res) => {
-  const verificationToken = req.params.token;
+  const { token } = req.params;
   const { kvkk, contract, electronic } = req.body;
 
   try {
-    // Tüm sözleşmelerin onaylandığını kontrol et
-    if (!kvkk || !contract || !electronic) {
-      return res.status(400).json({
-        success: false,
-        error: 'Tüm sözleşmeleri onaylamanız gerekmektedir'
-      });
-    }
-
     // Token ile müşteriyi bul
     const customer = await new Promise((resolve, reject) => {
       db.get(
-        'SELECT * FROM customers WHERE verification_token = ? AND email_verified = 1',
-        [verificationToken],
+        'SELECT * FROM customers WHERE verification_token = ? AND email_verified = 1 AND verification_token_expires_at > datetime("now")',
+        [token],
         (err, row) => {
           if (err) reject(err);
           else resolve(row);
@@ -587,23 +599,23 @@ router.post('/complete-registration/:token', async (req, res) => {
     if (!customer) {
       return res.status(400).json({
         success: false,
-        error: 'Geçersiz token veya email henüz onaylanmamış'
+        error: 'Geçersiz veya süresi dolmuş onay linki'
       });
     }
 
-    // Müşteriyi aktifleştir ve sözleşme onaylarını kaydet
+    // Sözleşme onaylarını kaydet ve hesabı aktifleştir
     await new Promise((resolve, reject) => {
       db.run(
         `UPDATE customers SET 
-         status = 'active', 
-         verification_token = NULL, 
-         kvkk_approved = 1,
-         contract_approved = 1,
-         electronic_approved = 1,
-         agreement_date = CURRENT_TIMESTAMP,
-         updated_at = CURRENT_TIMESTAMP 
-         WHERE id = ?`,
-        [customer.id],
+          kvkk_approved = ?, 
+          contract_approved = ?, 
+          electronic_approved = ?,
+          status = 'active',
+          verification_token = NULL,
+          verification_token_expires_at = NULL,
+          updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?`,
+        [kvkk ? 1 : 0, contract ? 1 : 0, electronic ? 1 : 0, customer.id],
         function(err) {
           if (err) reject(err);
           else resolve();
@@ -611,46 +623,9 @@ router.post('/complete-registration/:token', async (req, res) => {
       );
     });
 
-    // Sözleşme onay kaydını log'la
-    await new Promise((resolve, reject) => {
-      db.run(
-        `INSERT INTO customer_agreements 
-         (customer_id, kvkk_approved, contract_approved, electronic_approved, ip_address, user_agent, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [customer.id, 1, 1, 1, req.ip || 'unknown', req.get('User-Agent') || 'unknown'],
-        function(err) {
-          if (err) {
-            console.error('Sözleşme log hatası:', err);
-            // Log hatası olsa bile devam et
-          }
-          resolve();
-        }
-      );
-    });
-
-    // Onay emaili gönder
-    try {
-      await emailService.sendCustomerActivationEmail({
-        id: customer.id,
-        name: customer.name,
-        email: customer.email,
-        credit_limit: customer.credit_limit
-      });
-    } catch (emailError) {
-      console.error('Aktivasyon emaili gönderme hatası:', emailError);
-      // Email hatası olsa bile devam et
-    }
-
     res.json({
       success: true,
-      message: 'Hesabınız başarıyla aktifleştirildi',
-      customer: {
-        id: customer.id,
-        name: customer.name,
-        email: customer.email,
-        credit_limit: customer.credit_limit,
-        status: 'active'
-      }
+      message: 'Hesabınız başarıyla aktifleştirildi'
     });
 
   } catch (error) {

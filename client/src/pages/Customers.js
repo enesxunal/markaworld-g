@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -39,14 +39,14 @@ import {
   Search as SearchIcon,
   Add as AddIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Visibility as VisibilityIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Person as PersonIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
-  CreditCard as CreditCardIcon
+  CreditCard as CreditCardIcon,
+  AddShoppingCart as AddShoppingCartIcon
 } from '@mui/icons-material';
 import { customerAPI } from '../services/api';
 
@@ -70,6 +70,7 @@ function Customers() {
     status: 'active'
   });
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -80,6 +81,16 @@ function Customers() {
   useEffect(() => {
     filterCustomers();
   }, [customers, searchTerm, statusFilter]);
+
+  useEffect(() => {
+    // Eğer detay sayfasından düzenlemek için gelindiyse
+    if (location.state?.editCustomer && customers.length > 0) {
+      const customer = location.state.editCustomer;
+      handleOpenDialog(customer);
+      // State'i temizle
+      navigate('/admin/customers', { replace: true });
+    }
+  }, [location.state, customers]);
 
   const loadCustomers = async () => {
     try {
@@ -160,18 +171,6 @@ function Customers() {
     }
   };
 
-  const handleDelete = async (customer) => {
-    if (window.confirm(`${customer.name} adlı müşteriyi silmek istediğinizden emin misiniz?`)) {
-      try {
-        await customerAPI.delete(customer.id);
-        loadCustomers();
-      } catch (error) {
-        console.error('Müşteri silinemedi:', error);
-        alert('Hata: ' + (error.response?.data?.error || 'Müşteri silinemedi'));
-      }
-    }
-  };
-
   const getStatusChip = (status) => {
     const statusMap = {
       'active': { label: 'Aktif', color: 'success' },
@@ -187,103 +186,118 @@ function Customers() {
   };
 
   const renderMobileCard = (customer) => (
-    <Card key={customer.id} sx={{ mb: 1.5 }}>
-      <CardContent sx={{ p: 1.5 }}>
-        <Stack spacing={1}>
-          {/* Header */}
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
-                {customer.name}
+    <Card key={customer.id} sx={{ mb: 2 }}>
+      <CardContent>
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              {customer.name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              TC: {customer.tc_no}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Tel: {customer.phone}
+            </Typography>
+            <Box mt={1}>
+              <Typography variant="body2" color="text.secondary">
+                Limit: {parseFloat(customer.credit_limit).toLocaleString('tr-TR')}₺
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                TC: {customer.tc_no}
+              <Typography variant="body2" color="error">
+                Borç: {parseFloat(customer.current_debt || 0).toLocaleString('tr-TR')}₺
               </Typography>
-            </Box>
-            <Stack direction="row" spacing={0.5} alignItems="center">
-              {getStatusChip(customer.status)}
-              <IconButton 
-                size="small" 
-                onClick={() => handleCardExpand(customer.id)}
-                sx={{ p: 0.5 }}
-              >
-                {expandedCard === customer.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              </IconButton>
-            </Stack>
-          </Stack>
-
-          {/* Quick Info */}
-          <Stack direction="row" spacing={2}>
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                Telefon
-              </Typography>
-              <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                {customer.phone}
+              <Typography variant="body2" color="success.main">
+                Kullanılabilir: {(parseFloat(customer.credit_limit) - parseFloat(customer.current_debt || 0)).toLocaleString('tr-TR')}₺
               </Typography>
             </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                Kredi Limiti
-              </Typography>
-              <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
-                {parseFloat(customer.credit_limit).toLocaleString('tr-TR')}₺
-              </Typography>
-            </Box>
-          </Stack>
-
-          {/* Expanded Content */}
-          <Collapse in={expandedCard === customer.id}>
-            <Divider sx={{ my: 1 }} />
-            <Stack spacing={1}>
-              {customer.email && (
-                <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                    Email
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                    {customer.email}
-                  </Typography>
-                </Box>
-              )}
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                  Mevcut Borç
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
-                  {parseFloat(customer.current_debt || 0).toLocaleString('tr-TR')}₺
-                </Typography>
-              </Box>
-              
-              {/* Action Buttons */}
-              <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 1 }}>
-                <IconButton
-                  size="small"
-                  onClick={() => navigate(`/admin/customers/${customer.id}`)}
-                  sx={{ backgroundColor: 'primary.main', color: 'white', '&:hover': { backgroundColor: 'primary.dark' } }}
-                >
-                  <VisibilityIcon sx={{ fontSize: '1rem' }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  onClick={() => handleOpenDialog(customer)}
-                  sx={{ backgroundColor: 'warning.main', color: 'white', '&:hover': { backgroundColor: 'warning.dark' } }}
-                >
-                  <EditIcon sx={{ fontSize: '1rem' }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  onClick={() => handleDelete(customer)}
-                  sx={{ backgroundColor: 'error.main', color: 'white', '&:hover': { backgroundColor: 'error.dark' } }}
-                >
-                  <DeleteIcon sx={{ fontSize: '1rem' }} />
-                </IconButton>
-              </Stack>
-            </Stack>
-          </Collapse>
-        </Stack>
+          </Box>
+          <Box>
+            <IconButton
+              size="small"
+              onClick={() => handleOpenDialog(customer)}
+            >
+              <EditIcon />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => navigate('/admin/sales/new', { state: { selectedCustomer: customer } })}
+            >
+              <AddShoppingCartIcon />
+            </IconButton>
+          </Box>
+        </Box>
       </CardContent>
     </Card>
+  );
+
+  const renderDesktopTable = () => (
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Ad Soyad</TableCell>
+            <TableCell>TC Kimlik No</TableCell>
+            <TableCell>Telefon</TableCell>
+            <TableCell>Finansal Durum</TableCell>
+            <TableCell>Durum</TableCell>
+            <TableCell>İşlemler</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {filteredCustomers.length > 0 ? (
+            filteredCustomers.map((customer) => (
+              <TableRow key={customer.id}>
+                <TableCell>{customer.name}</TableCell>
+                <TableCell>{customer.tc_no}</TableCell>
+                <TableCell>{customer.phone}</TableCell>
+                <TableCell>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Limit: {parseFloat(customer.credit_limit).toLocaleString('tr-TR')}₺
+                    </Typography>
+                    <Typography variant="body2" color="error">
+                      Borç: {parseFloat(customer.current_debt || 0).toLocaleString('tr-TR')}₺
+                    </Typography>
+                    <Typography variant="body2" color="success.main">
+                      Kullanılabilir: {(parseFloat(customer.credit_limit) - parseFloat(customer.current_debt || 0)).toLocaleString('tr-TR')}₺
+                    </Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={customer.status === 'active' ? 'Aktif' : 'Pasif'}
+                    color={customer.status === 'active' ? 'success' : 'default'}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleOpenDialog(customer)}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => navigate('/admin/sales/new', { state: { selectedCustomer: customer } })}
+                  >
+                    <AddShoppingCartIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={6} align="center">
+                <Typography variant="body1" color="text.secondary">
+                  Müşteri bulunamadı
+                </Typography>
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 
   if (loading) {
@@ -376,67 +390,7 @@ function Customers() {
         </Box>
       ) : (
         // Masaüstü Tablo Görünümü
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>Ad Soyad</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>TC Kimlik No</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Telefon</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Kredi Limiti</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Mevcut Borç</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Durum</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>İşlemler</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredCustomers.length > 0 ? (
-                filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell>{customer.name}</TableCell>
-                    <TableCell>{customer.tc_no}</TableCell>
-                    <TableCell>{customer.phone}</TableCell>
-                    <TableCell>{customer.email || '-'}</TableCell>
-                    <TableCell>{parseFloat(customer.credit_limit).toLocaleString('tr-TR')}₺</TableCell>
-                    <TableCell>{parseFloat(customer.current_debt || 0).toLocaleString('tr-TR')}₺</TableCell>
-                    <TableCell>{getStatusChip(customer.status)}</TableCell>
-                    <TableCell>
-                      <IconButton
-                        size="small"
-                        onClick={() => navigate(`/admin/customers/${customer.id}`)}
-                        title="Detay"
-                      >
-                        <VisibilityIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenDialog(customer)}
-                        title="Düzenle"
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDelete(customer)}
-                        title="Sil"
-                        color="error"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={8} align="center">
-                    Müşteri bulunamadı
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        renderDesktopTable()
       )}
 
       {/* Müşteri Ekleme/Düzenleme Dialog */}

@@ -1,32 +1,17 @@
 {
   "name": "marka-world-backend",
   "version": "1.0.2",
-  "description": "Marka World Backend API - Müşteri ödeme takip sistemi",
+  "description": "Marka World Backend API",
   "main": "server/index.js",
-  "type": "commonjs",
   "scripts": {
     "start": "cd server && node index.js",
     "dev": "cd server && nodemon index.js",
-    "install-deps": "cd server && npm install",
-    "build": "echo 'Backend - No build step required'",
-    "vercel-build": "echo 'Backend successfully prepared for Vercel'",
-    "test": "echo 'No tests specified'"
+    "build": "echo Backend build complete",
+    "vercel-build": "echo Backend ready for Vercel"
   },
-  "keywords": [
-    "nodejs",
-    "express",
-    "api",
-    "backend",
-    "payment-tracking",
-    "customer-management"
-  ],
   "author": "3 Kare Ajans",
   "license": "MIT",
   "engines": {
     "node": ">=16.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/enesxunal/markaworldback.git"
   }
 } 

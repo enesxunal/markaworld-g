@@ -74,27 +74,21 @@ function Sales() {
     setFilteredSales(filtered);
   };
 
-  const handleDelete = async (sale) => {
-    if (sale.status === 'approved') {
-      alert('Onaylanmış satış iptal edilemez!');
-      return;
-    }
-
-    if (window.confirm(`#${sale.id} numaralı satışı iptal etmek istediğinizden emin misiniz?`)) {
+  const handleDelete = async (saleId) => {
+    if (window.confirm(`#${saleId} numaralı satışı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
       try {
-        await salesAPI.cancel(sale.id);
+        await salesAPI.delete(saleId);
         loadSales();
       } catch (error) {
-        console.error('Satış iptal edilemedi:', error);
-        alert('Hata: ' + (error.response?.data?.error || 'Satış iptal edilemedi'));
+        console.error('Satış silinemedi:', error);
+        alert('Hata: ' + (error.response?.data?.error || 'Satış silinemedi'));
       }
     }
   };
 
   const getStatusChip = (status) => {
     const statusMap = {
-      'pending_approval': { label: 'Onay Bekliyor', color: 'warning' },
-      'approved': { label: 'Onaylandı', color: 'success' },
+      'approved': { label: 'Aktif', color: 'success' },
       'cancelled': { label: 'İptal', color: 'error' },
     };
     
@@ -135,7 +129,7 @@ function Sales() {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate('/sales/new')}
+          onClick={() => navigate('/admin/sales/new')}
         >
           Yeni Satış
         </Button>
@@ -168,8 +162,7 @@ function Sales() {
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
                 <MenuItem value="all">Tümü</MenuItem>
-                <MenuItem value="pending_approval">Onay Bekliyor</MenuItem>
-                <MenuItem value="approved">Onaylandı</MenuItem>
+                <MenuItem value="approved">Aktif</MenuItem>
                 <MenuItem value="cancelled">İptal</MenuItem>
               </Select>
             </FormControl>
@@ -212,21 +205,19 @@ function Sales() {
                   <TableCell>
                     <IconButton
                       size="small"
-                      onClick={() => navigate(`/sales/${sale.id}`)}
+                      onClick={() => navigate(`/admin/sales/${sale.id}`)}
                       title="Detay"
                     >
                       <VisibilityIcon />
                     </IconButton>
-                    {sale.status === 'pending_approval' && (
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDelete(sale)}
-                        title="İptal Et"
-                        color="error"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    )}
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDelete(sale.id)}
+                      color="error"
+                      title="Sil"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))

@@ -25,7 +25,7 @@ import {
 import {
   ArrowBack as ArrowBackIcon,
   Payment as PaymentIcon,
-  CheckCircle as CheckCircleIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { salesAPI } from '../services/api';
 
@@ -35,6 +35,7 @@ function SaleDetail() {
   const [sale, setSale] = useState(null);
   const [loading, setLoading] = useState(true);
   const [paymentDialog, setPaymentDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
   const [selectedInstallment, setSelectedInstallment] = useState(null);
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -70,6 +71,17 @@ function SaleDetail() {
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      await salesAPI.delete(sale.id);
+      setDeleteDialog(false);
+      navigate('/admin/sales', { state: { message: 'Satış başarıyla silindi' } });
+    } catch (error) {
+      console.error('Satış silinemedi:', error);
+      alert('Hata: ' + (error.response?.data?.error || 'Satış silinemedi'));
+    }
+  };
+
   const openPaymentDialog = (installment) => {
     setSelectedInstallment(installment);
     setPaymentDate(new Date().toISOString().split('T')[0]);
@@ -78,8 +90,7 @@ function SaleDetail() {
 
   const getStatusChip = (status) => {
     const statusMap = {
-      'pending_approval': { label: 'Onay Bekliyor', color: 'warning' },
-      'approved': { label: 'Onaylandı', color: 'success' },
+      'approved': { label: 'Aktif', color: 'success' },
       'cancelled': { label: 'İptal', color: 'error' },
     };
     
@@ -110,7 +121,7 @@ function SaleDetail() {
     return (
       <Box>
         <Typography variant="h6">Satış bulunamadı</Typography>
-        <Button onClick={() => navigate('/sales')} startIcon={<ArrowBackIcon />}>
+        <Button onClick={() => navigate('/admin/sales')} startIcon={<ArrowBackIcon />}>
           Geri Dön
         </Button>
       </Box>
@@ -120,13 +131,21 @@ function SaleDetail() {
   return (
     <Box>
       <Box display="flex" alignItems="center" mb={3}>
-        <IconButton onClick={() => navigate('/sales')} sx={{ mr: 2 }}>
+        <IconButton onClick={() => navigate('/admin/sales')} sx={{ mr: 2 }}>
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h4" sx={{ flexGrow: 1 }}>
           Satış Detayı #{sale.id}
         </Typography>
         {getStatusChip(sale.status)}
+        <Button
+          color="error"
+          startIcon={<DeleteIcon />}
+          onClick={() => setDeleteDialog(true)}
+          sx={{ ml: 2 }}
+        >
+          Sil
+        </Button>
       </Box>
 
       <Grid container spacing={3}>
@@ -204,65 +223,10 @@ function SaleDetail() {
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="body2" color="textSecondary">
-                    Satış Tarihi
+                    Oluşturulma Tarihi
                   </Typography>
                   <Typography variant="body1">
                     {new Date(sale.created_at).toLocaleDateString('tr-TR')}
-                  </Typography>
-                </Grid>
-                {sale.approved_at && (
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="textSecondary">
-                      Onay Tarihi
-                    </Typography>
-                    <Typography variant="body1">
-                      {new Date(sale.approved_at).toLocaleDateString('tr-TR')}
-                    </Typography>
-                  </Grid>
-                )}
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Ödeme Durumu */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Ödeme Durumu
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="textSecondary">
-                    Ödenen Taksit
-                  </Typography>
-                  <Typography variant="h4" color="success.main">
-                    {sale.installments?.filter(i => i.status === 'paid').length || 0}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="textSecondary">
-                    Kalan Taksit
-                  </Typography>
-                  <Typography variant="h4" color="warning.main">
-                    {sale.installments?.filter(i => i.status !== 'paid').length || 0}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="textSecondary">
-                    Ödenen Tutar
-                  </Typography>
-                  <Typography variant="h5" color="success.main">
-                    {(sale.installments?.filter(i => i.status === 'paid').length * parseFloat(sale.installment_amount) || 0).toLocaleString('tr-TR')}₺
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="textSecondary">
-                    Kalan Tutar
-                  </Typography>
-                  <Typography variant="h5" color="error">
-                    {(sale.installments?.filter(i => i.status !== 'paid').length * parseFloat(sale.installment_amount) || 0).toLocaleString('tr-TR')}₺
                   </Typography>
                 </Grid>
               </Grid>
@@ -271,72 +235,61 @@ function SaleDetail() {
         </Grid>
 
         {/* Taksit Tablosu */}
-        <Grid item xs={12}>
+        <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Taksit Detayları
+                Taksit Tablosu
               </Typography>
-              <TableContainer component={Paper} variant="outlined">
+              <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow>
                       <TableCell>Taksit No</TableCell>
-                      <TableCell>Tutar</TableCell>
                       <TableCell>Vade Tarihi</TableCell>
-                      <TableCell>Ödeme Tarihi</TableCell>
+                      <TableCell align="right">Tutar</TableCell>
                       <TableCell>Durum</TableCell>
-                      <TableCell>İşlemler</TableCell>
+                      <TableCell align="right">İşlem</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {sale.installments && sale.installments.length > 0 ? (
-                      sale.installments.map((installment) => (
+                    {sale.installments?.map((installment) => {
+                      const dueDate = new Date(installment.due_date);
+                      const today = new Date();
+                      const diffTime = Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24));
+                      const isLate = diffTime > 0 && installment.status === 'unpaid';
+
+                      return (
                         <TableRow key={installment.id}>
                           <TableCell>{installment.installment_number}</TableCell>
-                          <TableCell>{parseFloat(installment.amount).toLocaleString('tr-TR')}₺</TableCell>
                           <TableCell>
                             {new Date(installment.due_date).toLocaleDateString('tr-TR')}
                           </TableCell>
-                          <TableCell>
-                            {installment.paid_date 
-                              ? new Date(installment.paid_date).toLocaleDateString('tr-TR')
-                              : '-'
-                            }
+                          <TableCell align="right">
+                            {parseFloat(installment.amount).toLocaleString('tr-TR')}₺
                           </TableCell>
                           <TableCell>
-                            {getInstallmentStatusChip(installment.status, installment.late_days)}
+                            {getInstallmentStatusChip(installment.status, isLate ? diffTime : 0)}
                           </TableCell>
-                          <TableCell>
-                            {installment.status === 'unpaid' || installment.status === 'overdue' ? (
-                              <Button
+                          <TableCell align="right">
+                            {installment.status === 'unpaid' && (
+                              <IconButton
+                                color="primary"
                                 size="small"
-                                variant="contained"
-                                color="success"
-                                startIcon={<PaymentIcon />}
                                 onClick={() => openPaymentDialog(installment)}
-                                disabled={sale.status !== 'approved'}
                               >
-                                Öde
-                              </Button>
-                            ) : (
-                              <Chip
-                                icon={<CheckCircleIcon />}
-                                label="Ödendi"
-                                color="success"
-                                size="small"
-                              />
+                                <PaymentIcon />
+                              </IconButton>
+                            )}
+                            {installment.status === 'paid' && (
+                              <Typography variant="caption" color="success.main">
+                                Ödeme Yapıldı
+                              </Typography>
                             )}
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} align="center">
-                          Taksit bilgisi bulunamadı
-                        </TableCell>
-                      </TableRow>
-                    )}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -347,35 +300,39 @@ function SaleDetail() {
 
       {/* Ödeme Dialog */}
       <Dialog open={paymentDialog} onClose={() => setPaymentDialog(false)}>
-        <DialogTitle>Taksit Ödemesi</DialogTitle>
+        <DialogTitle>Ödeme Kaydet</DialogTitle>
         <DialogContent>
-          {selectedInstallment && (
-            <Box>
-              <Typography variant="body1" gutterBottom>
-                <strong>Taksit No:</strong> {selectedInstallment.installment_number}
-              </Typography>
-              <Typography variant="body1" gutterBottom>
-                <strong>Tutar:</strong> {parseFloat(selectedInstallment.amount).toLocaleString('tr-TR')}₺
-              </Typography>
-              <Typography variant="body1" gutterBottom>
-                <strong>Vade Tarihi:</strong> {new Date(selectedInstallment.due_date).toLocaleDateString('tr-TR')}
-              </Typography>
-              <TextField
-                fullWidth
-                label="Ödeme Tarihi"
-                type="date"
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={{ mt: 2 }}
-              />
-            </Box>
-          )}
+          <Box mt={2}>
+            <TextField
+              label="Ödeme Tarihi"
+              type="date"
+              value={paymentDate}
+              onChange={(e) => setPaymentDate(e.target.value)}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPaymentDialog(false)}>İptal</Button>
-          <Button onClick={handlePayment} variant="contained">
+          <Button onClick={handlePayment} color="primary">
             Ödemeyi Kaydet
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Silme Dialog */}
+      <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)}>
+        <DialogTitle>Satışı Sil</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Bu satışı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog(false)}>İptal</Button>
+          <Button onClick={handleDelete} color="error">
+            Sil
           </Button>
         </DialogActions>
       </Dialog>

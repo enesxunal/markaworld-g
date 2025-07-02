@@ -177,13 +177,20 @@ const CustomerRegister = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Person sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
+                      <Person sx={{ 
+                        fontSize: isMobile ? '1.2rem' : '1.5rem',
+                        color: 'action.active'
+                      }} />
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     minHeight: isMobile ? '48px' : '56px',
+                    backgroundColor: 'background.paper'
+                  },
+                  '& .MuiFormHelperText-root': {
+                    fontSize: isMobile ? '0.7rem' : '0.75rem'
                   }
                 }}
               />
@@ -201,13 +208,20 @@ const CustomerRegister = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <CreditCard sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
+                      <CreditCard sx={{ 
+                        fontSize: isMobile ? '1.2rem' : '1.5rem',
+                        color: 'action.active'
+                      }} />
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     minHeight: isMobile ? '48px' : '56px',
+                    backgroundColor: 'background.paper'
+                  },
+                  '& .MuiFormHelperText-root': {
+                    fontSize: isMobile ? '0.7rem' : '0.75rem'
                   }
                 }}
               />
@@ -224,13 +238,20 @@ const CustomerRegister = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Phone sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
+                      <Phone sx={{ 
+                        fontSize: isMobile ? '1.2rem' : '1.5rem',
+                        color: 'action.active'
+                      }} />
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     minHeight: isMobile ? '48px' : '56px',
+                    backgroundColor: 'background.paper'
+                  },
+                  '& .MuiFormHelperText-root': {
+                    fontSize: isMobile ? '0.7rem' : '0.75rem'
                   }
                 }}
               />
@@ -238,23 +259,32 @@ const CustomerRegister = () => {
             <Grid item xs={12}>
               <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="tr">
                 <DatePicker
-                  label="Doğum Tarihi (İsteğe Bağlı)"
+                  label="Doğum Tarihi"
                   value={formData.birth_date}
                   onChange={handleDateChange}
-                  maxDate={dayjs().subtract(18, 'year')}
+                  format="DD.MM.YYYY"
                   slotProps={{
                     textField: {
                       fullWidth: true,
+                      error: !!errors.birth_date,
+                      helperText: errors.birth_date,
                       InputProps: {
                         startAdornment: (
                           <InputAdornment position="start">
-                            <CalendarToday sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
+                            <CalendarToday sx={{ 
+                              fontSize: isMobile ? '1.2rem' : '1.5rem',
+                              color: 'action.active'
+                            }} />
                           </InputAdornment>
                         ),
                       },
                       sx: {
                         '& .MuiOutlinedInput-root': {
                           minHeight: isMobile ? '48px' : '56px',
+                          backgroundColor: 'background.paper'
+                        },
+                        '& .MuiFormHelperText-root': {
+                          fontSize: isMobile ? '0.7rem' : '0.75rem'
                         }
                       }
                     }
@@ -271,7 +301,7 @@ const CustomerRegister = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Email Adresi"
+                label="Email"
                 name="email"
                 type="email"
                 value={formData.email}
@@ -281,13 +311,20 @@ const CustomerRegister = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Email sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
+                      <Email sx={{ 
+                        fontSize: isMobile ? '1.2rem' : '1.5rem',
+                        color: 'action.active'
+                      }} />
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     minHeight: isMobile ? '48px' : '56px',
+                    backgroundColor: 'background.paper'
+                  },
+                  '& .MuiFormHelperText-root': {
+                    fontSize: isMobile ? '0.7rem' : '0.75rem'
                   }
                 }}
               />
@@ -302,17 +339,23 @@ const CustomerRegister = () => {
                 onChange={handleChange}
                 error={!!errors.password}
                 helperText={errors.password}
-                autoComplete="new-password"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Lock sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
+                      <Lock sx={{ 
+                        fontSize: isMobile ? '1.2rem' : '1.5rem',
+                        color: 'action.active'
+                      }} />
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     minHeight: isMobile ? '48px' : '56px',
+                    backgroundColor: 'background.paper'
+                  },
+                  '& .MuiFormHelperText-root': {
+                    fontSize: isMobile ? '0.7rem' : '0.75rem'
                   }
                 }}
               />
@@ -320,24 +363,30 @@ const CustomerRegister = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Şifre Tekrarı"
+                label="Şifre Tekrar"
                 name="confirmPassword"
                 type="password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 error={!!errors.confirmPassword}
                 helperText={errors.confirmPassword}
-                autoComplete="new-password"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Lock sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
+                      <Lock sx={{ 
+                        fontSize: isMobile ? '1.2rem' : '1.5rem',
+                        color: 'action.active'
+                      }} />
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     minHeight: isMobile ? '48px' : '56px',
+                    backgroundColor: 'background.paper'
+                  },
+                  '& .MuiFormHelperText-root': {
+                    fontSize: isMobile ? '0.7rem' : '0.75rem'
                   }
                 }}
               />
@@ -345,18 +394,31 @@ const CustomerRegister = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Adres (İsteğe Bağlı)"
+                label="Adres"
                 name="address"
                 multiline
-                rows={isMobile ? 2 : 3}
+                rows={3}
                 value={formData.address}
                 onChange={handleChange}
+                error={!!errors.address}
+                helperText={errors.address}
                 InputProps={{
                   startAdornment: (
-                    <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1 }}>
-                      <Home sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
+                    <InputAdornment position="start">
+                      <Home sx={{ 
+                        fontSize: isMobile ? '1.2rem' : '1.5rem',
+                        color: 'action.active'
+                      }} />
                     </InputAdornment>
                   ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'background.paper'
+                  },
+                  '& .MuiFormHelperText-root': {
+                    fontSize: isMobile ? '0.7rem' : '0.75rem'
+                  }
                 }}
               />
             </Grid>
@@ -418,16 +480,22 @@ const CustomerRegister = () => {
     <Container 
       maxWidth="md" 
       sx={{ 
-        py: isMobile ? 2 : 4,
+        py: isMobile ? 2 : 8,
         px: isMobile ? 1 : 3,
-        minHeight: '100vh'
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: isMobile ? 'transparent' : 'rgba(0,0,0,0.02)'
       }}
     >
       <Paper 
         elevation={isMobile ? 2 : 3} 
         sx={{ 
           p: isMobile ? 2 : 4, 
-          borderRadius: isMobile ? 2 : 3 
+          borderRadius: isMobile ? 2 : 3,
+          width: '100%',
+          boxShadow: isMobile ? '0 2px 8px rgba(0,0,0,0.1)' : '0 4px 16px rgba(0,0,0,0.1)'
         }}
       >
         <Box textAlign="center" mb={isMobile ? 3 : 4}>
@@ -435,39 +503,49 @@ const CustomerRegister = () => {
             src="/logo.png" 
             alt="Marka World" 
             style={{ 
-              height: isMobile ? '50px' : '60px', 
-              marginBottom: isMobile ? '16px' : '20px' 
+              height: isMobile ? '60px' : '80px', 
+              marginBottom: isMobile ? '16px' : '20px',
+              width: 'auto'
             }}
           />
           <Typography 
             variant={isMobile ? "h5" : "h4"} 
             component="h1" 
             gutterBottom
-            sx={{ fontWeight: 'bold' }}
+            sx={{ 
+              fontWeight: 'bold',
+              fontSize: isMobile ? '1.5rem' : '2rem'
+            }}
           >
             Yeni Hesap Oluştur
           </Typography>
           <Typography 
             variant="body2" 
             color="text.secondary"
-            sx={{ fontSize: isMobile ? '0.8rem' : '0.875rem' }}
+            sx={{ 
+              fontSize: isMobile ? '0.8rem' : '0.875rem',
+              maxWidth: '80%',
+              margin: '0 auto'
+            }}
           >
-            Marka World'da taksitli alışveriş için hesap oluşturun
+            Marka World'e hoş geldiniz! Lütfen bilgilerinizi girin.
           </Typography>
         </Box>
 
         <Stepper 
           activeStep={activeStep} 
+          alternativeLabel={!isMobile}
+          orientation={isMobile ? "vertical" : "horizontal"}
           sx={{ 
             mb: isMobile ? 3 : 4,
             '& .MuiStepLabel-label': {
-              fontSize: isMobile ? '0.75rem' : '0.875rem'
+              fontSize: isMobile ? '0.8rem' : '0.9rem'
             }
           }}
         >
           {steps.map((label) => (
             <Step key={label}>
-              <StepLabel>{isMobile ? '' : label}</StepLabel>
+              <StepLabel>{label}</StepLabel>
             </Step>
           ))}
         </Stepper>
@@ -477,78 +555,100 @@ const CustomerRegister = () => {
             severity="error" 
             sx={{ 
               mb: 3,
-              fontSize: isMobile ? '0.8rem' : '0.875rem'
+              fontSize: isMobile ? '0.8rem' : '0.875rem',
+              '& .MuiAlert-message': {
+                width: '100%'
+              }
             }}
           >
             {errors.general}
           </Alert>
         )}
 
-        {renderStepContent(activeStep)}
-
-        {activeStep < 2 && (
-          <Box 
-            sx={{ 
-              display: 'flex', 
-              flexDirection: isMobile ? 'column' : 'row',
-              gap: isMobile ? 2 : 0,
-              pt: isMobile ? 3 : 4 
-            }}
-          >
-            <Button
-              disabled={activeStep === 0}
-              onClick={handleBack}
+        {activeStep === 2 ? (
+          <Box textAlign="center">
+            <CheckCircle 
+              color="success" 
               sx={{ 
-                mr: isMobile ? 0 : 1,
-                order: isMobile ? 2 : 1,
-                minHeight: isMobile ? '48px' : '56px'
+                fontSize: isMobile ? '64px' : '96px',
+                mb: 2
+              }} 
+            />
+            <Typography 
+              variant={isMobile ? "h5" : "h4"} 
+              gutterBottom
+              sx={{ fontWeight: 'bold' }}
+            >
+              Kayıt Başarılı!
+            </Typography>
+            <Typography 
+              variant="body1" 
+              color="text.secondary"
+              sx={{ mb: 4 }}
+            >
+              Hesabınız başarıyla oluşturuldu. Şimdi giriş yapabilirsiniz.
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/customer-login')}
+              size={isMobile ? "medium" : "large"}
+              sx={{ 
+                minWidth: 200,
+                py: isMobile ? 1 : 1.5,
+                boxShadow: 'none',
+                '&:hover': {
+                  boxShadow: 'none',
+                  opacity: 0.9
+                }
               }}
             >
-              Geri
+              Giriş Yap
             </Button>
-            <Box sx={{ flex: '1 1 auto' }} />
-            {activeStep === steps.length - 2 ? (
+          </Box>
+        ) : (
+          <>
+            {renderStepContent(activeStep)}
+            
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between',
+              mt: isMobile ? 3 : 4,
+              gap: 2
+            }}>
+              <Button
+                disabled={activeStep === 0}
+                onClick={handleBack}
+                variant="outlined"
+                size={isMobile ? "medium" : "large"}
+                sx={{ 
+                  minWidth: '120px',
+                  borderWidth: 2,
+                  '&:hover': {
+                    borderWidth: 2
+                  }
+                }}
+              >
+                Geri
+              </Button>
               <Button
                 variant="contained"
-                onClick={handleSubmit}
+                onClick={activeStep === 1 ? handleSubmit : handleNext}
+                size={isMobile ? "medium" : "large"}
                 disabled={loading}
                 sx={{ 
-                  order: isMobile ? 1 : 2,
-                  minHeight: isMobile ? '48px' : '56px',
-                  fontSize: isMobile ? '0.9rem' : '1rem'
+                  minWidth: '120px',
+                  boxShadow: 'none',
+                  '&:hover': {
+                    boxShadow: 'none',
+                    opacity: 0.9
+                  }
                 }}
               >
-                {loading ? 'Kaydediliyor...' : 'Hesap Oluştur'}
+                {activeStep === 1 ? (loading ? 'Kaydediliyor...' : 'Kaydet') : 'İleri'}
               </Button>
-            ) : (
-              <Button
-                variant="contained"
-                onClick={handleNext}
-                sx={{ 
-                  order: isMobile ? 1 : 2,
-                  minHeight: isMobile ? '48px' : '56px',
-                  fontSize: isMobile ? '0.9rem' : '1rem'
-                }}
-              >
-                İleri
-              </Button>
-            )}
-          </Box>
+            </Box>
+          </>
         )}
-
-        <Box textAlign="center" mt={isMobile ? 3 : 4}>
-          <Button
-            variant="text"
-            onClick={() => navigate('/customer-login')}
-            sx={{ 
-              color: 'text.secondary',
-              fontSize: isMobile ? '0.8rem' : '0.9rem',
-              minHeight: isMobile ? '36px' : '40px'
-            }}
-          >
-            Zaten hesabınız var mı? Giriş yapın
-          </Button>
-        </Box>
       </Paper>
     </Container>
   );

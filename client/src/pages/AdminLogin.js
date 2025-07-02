@@ -56,9 +56,10 @@ const AdminLogin = () => {
         localStorage.setItem('adminUser', JSON.stringify(response.data.admin));
         
         // Admin dashboard'a yönlendir
-        navigate('/admin/dashboard');
+        navigate('/admin/dashboard', { replace: true });
       }
     } catch (error) {
+      console.error('Login error:', error);
       setError(error.response?.data?.error || 'Giriş başarısız');
     } finally {
       setLoading(false);

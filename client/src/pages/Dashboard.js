@@ -23,6 +23,7 @@ import {
   TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import { customerAPI, salesAPI, systemAPI } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 function Dashboard() {
   const [stats, setStats] = useState({
@@ -34,6 +35,7 @@ function Dashboard() {
   const [recentSales, setRecentSales] = useState([]);
   const [upcomingPayments, setUpcomingPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadDashboardData();
@@ -59,6 +61,10 @@ function Dashboard() {
       // Son satışlar (son 5)
       const recentSales = sales.slice(0, 5);
       
+      // Yaklaşan taksitleri getir (5 günlük)
+      const upcomingResponse = await salesAPI.getUpcomingInstallments(5);
+      const upcomingPayments = upcomingResponse.data;
+      
       setStats({
         totalCustomers,
         activeSales,
@@ -67,6 +73,7 @@ function Dashboard() {
       });
       
       setRecentSales(recentSales);
+      setUpcomingPayments(upcomingPayments);
       
     } catch (error) {
       console.error('Dashboard verileri yüklenemedi:', error);
@@ -141,6 +148,16 @@ function Dashboard() {
         </Button>
       </Alert>
 
+      <Button
+        variant="contained"
+        color="primary"
+        fullWidth
+        onClick={() => navigate('/')}
+        sx={{ mb: 2 }}
+      >
+        Ana Sayfa
+      </Button>
+
       {/* İstatistik Kartları */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -179,7 +196,7 @@ function Dashboard() {
 
       {/* Son Satışlar */}
       <Grid container spacing={3}>
-        <Grid item xs={12}>
+        <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -213,6 +230,49 @@ function Dashboard() {
                       <TableRow>
                         <TableCell colSpan={5} align="center">
                           Henüz satış kaydı bulunmuyor
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        {/* Yaklaşan Taksitler */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Yaklaşan Taksitler (5 Gün)
+              </Typography>
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Müşteri</TableCell>
+                      <TableCell>Tutar</TableCell>
+                      <TableCell>Vade</TableCell>
+                      <TableCell>Taksit No</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {upcomingPayments.length > 0 ? (
+                      upcomingPayments.map((payment) => (
+                        <TableRow key={payment.id}>
+                          <TableCell>{payment.customer_name}</TableCell>
+                          <TableCell>{parseFloat(payment.amount).toLocaleString('tr-TR')}₺</TableCell>
+                          <TableCell>
+                            {new Date(payment.due_date).toLocaleDateString('tr-TR')}
+                          </TableCell>
+                          <TableCell>{payment.installment_number}. Taksit</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center">
+                          Yaklaşan taksit bulunmuyor
                         </TableCell>
                       </TableRow>
                     )}

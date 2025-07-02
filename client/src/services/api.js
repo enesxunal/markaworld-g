@@ -1,22 +1,40 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 
-  (process.env.NODE_ENV === 'production' 
-    ? 'https://markaworld.vercel.app/api' 
-    : 'http://localhost:5000/api');
-
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: 'http://localhost:5000/api',
+  timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
-  },
+    'Content-Type': 'application/json'
+  }
 });
 
-// Hata yakalama
+// Request interceptor
+api.interceptors.request.use(
+  (config) => {
+    // Önce admin token'ı kontrol et
+    const adminToken = localStorage.getItem('adminToken');
+    if (adminToken) {
+      config.headers.Authorization = `Bearer ${adminToken}`;
+      return config;
+    }
+
+    // Admin token yoksa normal token'ı kontrol et
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor - sadece hataları logla
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Hatası:', error);
+    console.error('API Error:', error.response?.data?.message || error.message);
     return Promise.reject(error);
   }
 );
@@ -39,7 +57,7 @@ export const customerAPI = {
   delete: (id) => api.delete(`/customers/${id}`),
   
   // Kredi limitini artır
-  increaseLimit: (id) => api.post(`/customers/${id}/increase-limit`),
+  increaseLimit: (id, data) => api.post(`/customers/${id}/increase-limit`, data),
   
   // Müşteri kayıt (self-registration)
   register: (customerData) => api.post('/customers/register', customerData),
@@ -80,6 +98,14 @@ export const salesAPI = {
   
   // Satışı iptal et
   cancel: (id) => api.delete(`/sales/${id}`),
+  
+  // Yaklaşan taksitleri getir
+  getUpcomingInstallments: (days = 5) => api.get(`/sales/installments/upcoming?days=${days}`),
+
+  // Gelecek ödemeleri getir
+  getFuturePayments: (params = {}) => api.get('/sales/future-payments', { params }),
+
+  delete: (id) => api.delete(`/sales/${id}`),
 };
 
 // Sistem API'leri
@@ -101,6 +127,30 @@ export const adminAPI = {
   
   // Admin profil
   getProfile: () => api.get('/admin/profile'),
+
+  // Mail listesi
+  getSubscribers: () => api.get('/email/subscribers'),
+
+  // Toplu mail gönder
+  sendBulkEmail: (subject, content) => api.post('/admin/send-bulk-email', { subject, content }),
+
+  // Yedekleri listele
+  get: (endpoint) => api.get(`/admin${endpoint}`),
+
+  // Yeni yedek oluştur
+  post: (endpoint) => api.post(`/admin${endpoint}`),
+
+  // Yedek sil
+  delete: (endpoint) => api.delete(`/admin${endpoint}`)
 };
 
-export default api; 
+// Email API'leri
+export const emailAPI = {
+  // Mail listesine kayıt
+  subscribe: (email) => api.post('/email/subscribe', { email }),
+  
+  // Mail listesini getir
+  getList: () => api.get('/email/list')
+};
+
+export default api;

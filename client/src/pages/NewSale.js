@@ -37,7 +37,7 @@ function NewSale() {
   const [formData, setFormData] = useState({
     customer_id: '',
     total_amount: '',
-    installment_count: 3,
+    installment_count: 1,
   });
   const [calculation, setCalculation] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -70,8 +70,14 @@ function NewSale() {
     const totalAmount = parseFloat(formData.total_amount);
     const installmentCount = parseInt(formData.installment_count);
     
-    // Faiz oranları (normalde backend'den gelecek)
-    const interestRates = { 3: 5, 5: 10 };
+    // Faiz oranları
+    const interestRates = {
+      1: 0,  // Faizsiz
+      2: 5,  // %5 faiz
+      3: 5,  // %5 faiz
+      4: 10, // %10 faiz
+      5: 10  // %10 faiz
+    };
     const interestRate = interestRates[installmentCount] || 0;
     
     const totalWithInterest = totalAmount * (1 + interestRate / 100);
@@ -111,7 +117,7 @@ function NewSale() {
     }
 
     // Kredi limiti kontrolü
-    const availableLimit = selectedCustomer.credit_limit - selectedCustomer.current_debt;
+    const availableLimit = selectedCustomer.credit_limit - (selectedCustomer.current_debt || 0);
     if (parseFloat(formData.total_amount) > availableLimit) {
       alert(`Kredi limiti yetersiz! Kullanılabilir limit: ${availableLimit.toLocaleString('tr-TR')}₺`);
       return;
@@ -121,8 +127,8 @@ function NewSale() {
       setLoading(true);
       const response = await salesAPI.create(formData);
       
-      alert('Taksitli satış başarıyla oluşturuldu! Müşteriye onay maili gönderildi.');
-      navigate('/sales');
+      alert('Taksitli satış başarıyla oluşturuldu ve onaylandı! Müşteriye bilgilendirme maili gönderildi.');
+      navigate('/admin/sales');
     } catch (error) {
       console.error('Satış oluşturulamadı:', error);
       alert('Hata: ' + (error.response?.data?.error || 'Satış oluşturulamadı'));
@@ -145,7 +151,7 @@ function NewSale() {
       <Box display="flex" alignItems="center" mb={3}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/sales')}
+          onClick={() => navigate('/admin/sales')}
           sx={{ mr: 2 }}
         >
           Geri
@@ -168,16 +174,95 @@ function NewSale() {
                 <Grid item xs={12}>
                   <Autocomplete
                     options={customers}
-                    getOptionLabel={(option) => `${option.name} (${option.tc_no})`}
+                    getOptionLabel={(option) => `${option.name} - TC: ${option.tc_no} - Tel: ${option.phone}`}
                     value={selectedCustomer}
                     onChange={handleCustomerChange}
+                    renderOption={(props, option) => (
+                      <Box component="li" {...props} sx={{ p: 2, minHeight: '80px', width: '100%' }}>
+                        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1rem' }}>
+                            {option.name}
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, fontSize: '0.85rem' }}>
+                            <Typography variant="body2" color="textSecondary">
+                              TC: {option.tc_no}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              Tel: {option.phone}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              Email: {option.email || 'Yok'}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              Adres: {option.address ? option.address.substring(0, 30) + '...' : 'Yok'}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, fontSize: '0.85rem' }}>
+                            <Typography variant="body2" color="primary" fontWeight="bold">
+                              Kredi: {option.credit_limit.toLocaleString('tr-TR')}₺
+                            </Typography>
+                            <Typography variant="body2" color="error">
+                              Borç: {(option.current_debt || 0).toLocaleString('tr-TR')}₺
+                            </Typography>
+                            <Typography variant="body2" color="success.main" fontWeight="bold">
+                              Kullanılabilir: {(option.credit_limit - (option.current_debt || 0)).toLocaleString('tr-TR')}₺
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+                    )}
                     renderInput={(params) => (
                       <TextField
                         {...params}
                         label="Müşteri Seçin *"
                         fullWidth
+                        placeholder="Müşteri adı, TC kimlik no veya telefon ile arayın..."
+                        sx={{
+                          minWidth: '800px',
+                          width: '100%',
+                          '& .MuiInputBase-root': {
+                            minHeight: '56px',
+                            fontSize: '1rem',
+                            padding: '14px 16px'
+                          },
+                          '& .MuiInputLabel-root': {
+                            fontSize: '1rem'
+                          },
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '4px',
+                            '& fieldset': {
+                              borderWidth: '1px'
+                            }
+                          }
+                        }}
                       />
                     )}
+                    ListboxProps={{
+                      style: {
+                        maxHeight: '500px',
+                        fontSize: '0.95rem'
+                      }
+                    }}
+                    sx={{
+                      minWidth: '800px',
+                      width: '100%',
+                      '& .MuiAutocomplete-option': {
+                        minHeight: '80px',
+                        padding: '12px 16px',
+                        fontSize: '0.95rem'
+                      },
+                      '& .MuiAutocomplete-listbox': {
+                        '& .MuiAutocomplete-option': {
+                          borderBottom: '1px solid #e0e0e0',
+                          '&:hover': {
+                            backgroundColor: '#f5f5f5'
+                          }
+                        }
+                      },
+                      '& .MuiAutocomplete-popper': {
+                        minWidth: '800px !important'
+                      }
+                    }}
                   />
                 </Grid>
                 
@@ -185,8 +270,8 @@ function NewSale() {
                   <Grid item xs={12}>
                     <Alert severity="info">
                       <strong>Kredi Limiti:</strong> {selectedCustomer.credit_limit.toLocaleString('tr-TR')}₺<br />
-                      <strong>Mevcut Borç:</strong> {selectedCustomer.current_debt.toLocaleString('tr-TR')}₺<br />
-                      <strong>Kullanılabilir:</strong> {(selectedCustomer.credit_limit - selectedCustomer.current_debt).toLocaleString('tr-TR')}₺
+                      <strong>Mevcut Borç:</strong> {(selectedCustomer.current_debt || 0).toLocaleString('tr-TR')}₺<br />
+                      <strong>Kullanılabilir:</strong> {(selectedCustomer.credit_limit - (selectedCustomer.current_debt || 0)).toLocaleString('tr-TR')}₺
                     </Alert>
                   </Grid>
                 )}
@@ -204,16 +289,21 @@ function NewSale() {
                   />
                 </Grid>
                 
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12}>
                   <FormControl fullWidth>
-                    <InputLabel>Taksit Sayısı *</InputLabel>
+                    <InputLabel>Taksit Sayısı</InputLabel>
                     <Select
                       value={formData.installment_count}
-                      label="Taksit Sayısı *"
-                      onChange={(e) => setFormData({ ...formData, installment_count: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, installment_count: e.target.value });
+                        setCalculation(null);
+                      }}
                     >
-                      <MenuItem value={3}>3 Taksit (%5 faiz)</MenuItem>
-                      <MenuItem value={5}>5 Taksit (%10 faiz)</MenuItem>
+                      <MenuItem value={1}>1 Taksit (Faizsiz)</MenuItem>
+                      <MenuItem value={2}>2 Taksit (%5 Faiz)</MenuItem>
+                      <MenuItem value={3}>3 Taksit (%5 Faiz)</MenuItem>
+                      <MenuItem value={4}>4 Taksit (%10 Faiz)</MenuItem>
+                      <MenuItem value={5}>5 Taksit (%10 Faiz)</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>

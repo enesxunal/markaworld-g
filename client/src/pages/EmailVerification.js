@@ -21,7 +21,7 @@ import {
   Security,
   Gavel
 } from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { customerAPI } from '../services/api';
 
 const steps = ['Email Onayı', 'Sözleşme Onayı', 'Hesap Aktif'];
@@ -29,6 +29,7 @@ const steps = ['Email Onayı', 'Sözleşme Onayı', 'Hesap Aktif'];
 const EmailVerification = () => {
   const { token } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,6 +41,10 @@ const EmailVerification = () => {
   });
 
   useEffect(() => {
+    if (!token) {
+      setError('Geçersiz doğrulama linki');
+      return;
+    }
     verifyEmail();
   }, [token]);
 
@@ -50,7 +55,7 @@ const EmailVerification = () => {
       
       if (response.data.success) {
         setCustomer(response.data.customer);
-        setActiveStep(1); // Email onaylandı, sözleşme adımına geç
+        setActiveStep(1); // Her zaman sözleşme adımına geç
       }
     } catch (error) {
       setError(error.response?.data?.error || 'Email onayı başarısız');
@@ -64,6 +69,7 @@ const EmailVerification = () => {
       ...prev,
       [type]: !prev[type]
     }));
+    setError(''); // Sözleşme onayı değiştiğinde hata mesajını temizle
   };
 
   const handleCompleteRegistration = async () => {
@@ -74,16 +80,18 @@ const EmailVerification = () => {
 
     try {
       setLoading(true);
-      // Sözleşme onaylarını kaydet
-      await customerAPI.completeRegistration(token, agreements);
-      setActiveStep(2);
+      setError(''); // Hata mesajını temizle
+      const response = await customerAPI.completeRegistration(token, agreements);
       
-      // 3 saniye sonra giriş sayfasına yönlendir
-      setTimeout(() => {
-        navigate('/customer-login', { 
-          state: { message: 'Hesabınız başarıyla aktifleştirildi! Giriş yapabilirsiniz.' }
-        });
-      }, 3000);
+      if (response.data.success) {
+        setActiveStep(2);
+        // 3 saniye sonra giriş sayfasına yönlendir
+        setTimeout(() => {
+          navigate('/customer-login', { 
+            state: { message: 'Hesabınız başarıyla aktifleştirildi! Giriş yapabilirsiniz.' }
+          });
+        }, 3000);
+      }
     } catch (error) {
       setError(error.response?.data?.error || 'Sözleşme onayı başarısız');
     } finally {

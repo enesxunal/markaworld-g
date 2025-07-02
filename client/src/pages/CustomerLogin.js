@@ -47,7 +47,9 @@ const CustomerLogin = () => {
       if (response.data.success) {
         // Müşteri bilgilerini localStorage'a kaydet
         localStorage.setItem('customer', JSON.stringify(response.data.customer));
-        navigate('/customer-profile');
+        
+        // Müşteri profil sayfasına yönlendir
+        navigate('/customer/profile');
       } else {
         setError('Giriş bilgileri hatalı. Lütfen TC kimlik numaranızı ve telefon numaranızı kontrol edin.');
       }
@@ -75,7 +77,8 @@ const CustomerLogin = () => {
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        background: isMobile ? 'transparent' : 'rgba(0,0,0,0.02)'
       }}
     >
       <Paper 
@@ -84,7 +87,8 @@ const CustomerLogin = () => {
           p: isMobile ? 3 : 4, 
           borderRadius: isMobile ? 2 : 3,
           width: '100%',
-          maxWidth: isMobile ? '100%' : '500px'
+          maxWidth: isMobile ? '100%' : '500px',
+          boxShadow: isMobile ? '0 2px 8px rgba(0,0,0,0.1)' : '0 4px 16px rgba(0,0,0,0.1)'
         }}
       >
         <Box textAlign="center" mb={isMobile ? 3 : 4}>
@@ -93,21 +97,29 @@ const CustomerLogin = () => {
             alt="Marka World" 
             style={{ 
               height: isMobile ? '60px' : '80px', 
-              marginBottom: isMobile ? '16px' : '20px' 
+              marginBottom: isMobile ? '16px' : '20px',
+              width: 'auto'
             }}
           />
           <Typography 
             variant={isMobile ? "h5" : "h4"} 
             component="h1" 
             gutterBottom
-            sx={{ fontWeight: 'bold' }}
+            sx={{ 
+              fontWeight: 'bold',
+              fontSize: isMobile ? '1.5rem' : '2rem'
+            }}
           >
             Müşteri Girişi
           </Typography>
           <Typography 
             variant="body2" 
             color="text.secondary"
-            sx={{ fontSize: isMobile ? '0.8rem' : '0.875rem' }}
+            sx={{ 
+              fontSize: isMobile ? '0.8rem' : '0.875rem',
+              maxWidth: '80%',
+              margin: '0 auto'
+            }}
           >
             Email ve şifreniz ile giriş yapın
           </Typography>
@@ -118,7 +130,10 @@ const CustomerLogin = () => {
             severity="error" 
             sx={{ 
               mb: 3,
-              fontSize: isMobile ? '0.8rem' : '0.875rem'
+              fontSize: isMobile ? '0.8rem' : '0.875rem',
+              '& .MuiAlert-message': {
+                width: '100%'
+              }
             }}
           >
             {error}
@@ -139,7 +154,10 @@ const CustomerLogin = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Email sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
+                  <Email sx={{ 
+                    fontSize: isMobile ? '1.2rem' : '1.5rem',
+                    color: 'action.active'
+                  }} />
                 </InputAdornment>
               ),
             }}
@@ -147,6 +165,7 @@ const CustomerLogin = () => {
               mb: isMobile ? 1.5 : 2,
               '& .MuiOutlinedInput-root': {
                 minHeight: isMobile ? '48px' : '56px',
+                backgroundColor: 'background.paper'
               }
             }}
           />
@@ -164,7 +183,10 @@ const CustomerLogin = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Lock sx={{ fontSize: isMobile ? '1.2rem' : '1.5rem' }} />
+                  <Lock sx={{ 
+                    fontSize: isMobile ? '1.2rem' : '1.5rem',
+                    color: 'action.active'
+                  }} />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -173,6 +195,7 @@ const CustomerLogin = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     edge="end"
                     size={isMobile ? 'small' : 'medium'}
+                    sx={{ color: 'action.active' }}
                   >
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
@@ -183,6 +206,7 @@ const CustomerLogin = () => {
               mb: isMobile ? 2 : 3,
               '& .MuiOutlinedInput-root': {
                 minHeight: isMobile ? '48px' : '56px',
+                backgroundColor: 'background.paper'
               }
             }}
           />
@@ -198,64 +222,44 @@ const CustomerLogin = () => {
               mb: 2, 
               py: isMobile ? 1.5 : 2,
               fontSize: isMobile ? '1rem' : '1.1rem',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: 'none',
+                opacity: 0.9
+              }
             }}
           >
             {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
           </Button>
-        </form>
 
-        <Divider sx={{ my: isMobile ? 2 : 3 }}>
-          <Typography 
-            variant="body2" 
-            color="text.secondary"
-            sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}
-          >
-            veya
-          </Typography>
-        </Divider>
+          <Divider sx={{ my: isMobile ? 2 : 3 }}>
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ fontSize: isMobile ? '0.75rem' : '0.8rem' }}
+            >
+              veya
+            </Typography>
+          </Divider>
 
-        <Button
-          fullWidth
-          variant="outlined"
-          size="large"
-          onClick={handleRegister}
-          sx={{ 
-            py: isMobile ? 1.5 : 2,
-            fontSize: isMobile ? '1rem' : '1.1rem',
-            fontWeight: 'bold'
-          }}
-        >
-          Yeni Hesap Oluştur
-        </Button>
-
-        <Box textAlign="center" mt={isMobile ? 2 : 3}>
-          <Typography 
-            variant="body2" 
-            color="text.secondary"
-            sx={{ 
-              fontSize: isMobile ? '0.75rem' : '0.875rem',
-              lineHeight: 1.4
-            }}
-          >
-            Hesabınız yok mu? Yukarıdaki "Yeni Hesap Oluştur" butonunu kullanın.
-          </Typography>
-        </Box>
-
-        <Box textAlign="center" mt={isMobile ? 1.5 : 2}>
           <Button
-            variant="text"
-            size="small"
-            onClick={() => navigate('/admin-login')}
+            fullWidth
+            variant="outlined"
+            onClick={handleRegister}
+            size="large"
             sx={{ 
-              color: 'text.secondary', 
-              fontSize: isMobile ? '0.7rem' : '0.8rem',
-              minHeight: isMobile ? '36px' : '40px'
+              py: isMobile ? 1.5 : 2,
+              fontSize: isMobile ? '0.9rem' : '1rem',
+              borderWidth: 2,
+              '&:hover': {
+                borderWidth: 2
+              }
             }}
           >
-            Admin Paneli
+            Yeni Hesap Oluştur
           </Button>
-        </Box>
+        </form>
       </Paper>
     </Container>
   );

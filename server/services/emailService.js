@@ -1,5 +1,10 @@
 const nodemailer = require('nodemailer');
-const { db } = require('../database/init');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+
+// Veritabanı bağlantısı
+const dbPath = path.join(__dirname, '../database/database.sqlite');
+const db = new sqlite3.Database(dbPath);
 
 class EmailService {
   constructor() {
@@ -8,159 +13,371 @@ class EmailService {
   }
 
   initTransporter() {
+    const host = process.env.EMAIL_HOST || 'fr-astral.guzelhosting.com';
+    const port = parseInt(process.env.EMAIL_PORT) || 465;
+    const secure = true;
+    const user = process.env.EMAIL_USER || 'info@markaworld.com.tr';
+    const pass = process.env.EMAIL_PASS || 'w0;d;JiZ8a,v';
+
+    console.log('📧 Email sunucusu yapılandırılıyor:', {
+      host,
+      port,
+      secure,
+      user
+    });
+
     this.transporter = nodemailer.createTransport({
-      host: 'fr-astral.guzelhosting.com', // Doğru hosting sunucusu
-      port: 465, // SSL portu
-      secure: true, // SSL kullan
+      host,
+      port,
+      secure,
       auth: {
-        user: 'info@markaworld.com.tr',
-        pass: 'w0;d;JiZ8a,v' // Mail hesabının şifresi
+        user,
+        pass
       },
       tls: {
         rejectUnauthorized: false
       },
-      debug: true, // Debug modunu aç
-      logger: true // Log'ları göster
+      debug: true
     });
+
+    // Bağlantıyı test et
+    this.transporter.verify()
+      .then(() => {
+        console.log('✅ Email sunucusu bağlantısı başarılı');
+        
+        // Test e-postası gönder
+        const testMailOptions = {
+          from: user,
+          to: user,
+          subject: 'Bağlantı Testi',
+          text: 'Bu bir test e-postasıdır. E-posta sunucusu bağlantısı başarılı.'
+        };
+        
+        return this.transporter.sendMail(testMailOptions);
+      })
+      .then(() => {
+        console.log('✅ Test e-postası başarıyla gönderildi');
+      })
+      .catch((error) => {
+        console.error('❌ Email sunucusu bağlantı hatası:', error);
+        if (error.code === 'EAUTH') {
+          console.error('❌ Kimlik doğrulama hatası: Kullanıcı adı veya şifre hatalı');
+        } else if (error.code === 'ESOCKET') {
+          console.error('❌ Bağlantı hatası: Sunucuya ulaşılamıyor');
+        }
+      });
   }
 
-  // Mail şablonunu getir ve değişkenleri değiştir
-  async getTemplate(templateName, variables = {}) {
+  getTemplate(templateName) {
     return new Promise((resolve, reject) => {
-      db.get('SELECT * FROM email_templates WHERE name = ?', [templateName], (err, template) => {
+      const query = `SELECT * FROM email_templates WHERE name = ?`;
+      db.get(query, [templateName], (err, template) => {
         if (err) {
+          console.error('❌ Mail şablonu yükleme hatası:', err);
           reject(err);
-          return;
-        }
-        
-        if (!template) {
+        } else if (!template) {
+          console.error('❌ Mail şablonu bulunamadı:', templateName);
           reject(new Error(`Mail şablonu bulunamadı: ${templateName}`));
-          return;
+        } else {
+          console.log('✅ Mail şablonu yüklendi:', template);
+          resolve(template);
         }
-
-        let subject = template.subject;
-        let htmlContent = template.html_content;
-
-        // Değişkenleri değiştir
-        Object.keys(variables).forEach(key => {
-          const regex = new RegExp(`{{${key}}}`, 'g');
-          subject = subject.replace(regex, variables[key]);
-          htmlContent = htmlContent.replace(regex, variables[key]);
-        });
-
-        resolve({
-          subject,
-          html: htmlContent
-        });
       });
     });
   }
 
-  // Mail gönder
-  async sendEmail(to, templateName, variables = {}) {
+  async logEmail(to, templateName, success, error = null) {
     try {
-      const template = await this.getTemplate(templateName, variables);
-      
+      const query = `INSERT INTO email_logs (to_address, template_name, success, error, created_at) 
+                     VALUES (?, ?, ?, ?, datetime('now'))`;
+      await new Promise((resolve, reject) => {
+        db.run(query, [to, templateName, success ? 1 : 0, error], function(err) {
+          if (err) {
+            console.error('❌ Email log kaydı hatası:', err);
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+    } catch (err) {
+      console.error('❌ Email log kaydı hatası:', err);
+    }
+  }
+
+  async sendEmail(to, templateName, variables) {
+    try {
+      console.log('📧 Mail gönderme başladı:', {
+        to,
+        templateName,
+        variables
+      });
+
+      // Mail şablonunu yükle
+      console.log('📧 Mail şablonu yükleniyor:', templateName, variables);
+      const template = await this.getTemplate(templateName);
+
+      if (!template || !template.subject || !template.html) {
+        throw new Error('Mail şablonu eksik veya hatalı');
+      }
+
+      // Şablondaki değişkenleri değiştir
+      let subject = template.subject;
+      let html = template.html;
+
+      // Değişkenleri yerleştir
+      Object.keys(variables).forEach(key => {
+        const regex = new RegExp(`{{${key}}}`, 'g');
+        subject = subject.replace(regex, variables[key]);
+        html = html.replace(regex, variables[key]);
+      });
+
+      // Maili gönder
       const mailOptions = {
-        from: '"Marka World" <info@markaworld.com.tr>',
-        to: to,
-        subject: template.subject,
-        html: template.html
+        from: process.env.EMAIL_USER || 'info@markaworld.com.tr',
+        to,
+        subject,
+        html
       };
 
-      const result = await this.transporter.sendMail(mailOptions);
-      
-      // Mail geçmişine kaydet
-      this.logEmail(variables.CUSTOMER_ID, templateName, template.subject, 'sent');
-      
-      return result;
+      await this.transporter.sendMail(mailOptions);
+      await this.logEmail(to, templateName, true);
+      console.log('✅ Email başarıyla gönderildi:', to);
     } catch (error) {
-      // Hata durumunda da kaydet
-      this.logEmail(variables.CUSTOMER_ID, templateName, '', 'failed', error.message);
+      console.error('❌ Mail gönderme hatası:', error);
+      await this.logEmail(to, templateName, false, error.message);
       throw error;
     }
   }
 
-  // Mail geçmişini kaydet
-  logEmail(customerId, templateName, subject, status, errorMessage = null) {
-    db.run(
-      'INSERT INTO email_logs (customer_id, template_name, subject, status, error_message) VALUES (?, ?, ?, ?, ?)',
-      [customerId, templateName, subject, status, errorMessage]
-    );
-  }
-
-  // Müşteri kayıt onay maili gönder
   async sendCustomerRegistrationEmail(customer, verificationToken) {
-    const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email/${verificationToken}`;
-    
+    console.log('📧 Müşteri kayıt onay maili gönderiliyor:', {
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email
+      },
+      verificationToken
+    });
+
     const variables = {
       CUSTOMER_ID: customer.id,
       CUSTOMER_NAME: customer.name,
-      VERIFICATION_LINK: verificationLink,
-      COMPANY_NAME: process.env.COMPANY_NAME || 'Marka World'
+      VERIFICATION_URL: `http://localhost:3000/api/customers/verify-email/${verificationToken}`,
+      COMPANY_NAME: 'Marka World'
     };
 
-    return this.sendEmail(customer.email, 'customer_registration', variables);
+    await this.sendEmail(customer.email, 'customer_registration', variables);
   }
 
-  // Satış onay maili gönder
-  async sendSaleApprovalEmail(customer, sale) {
-    const approvalLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/approve/${sale.approval_token}`;
-    
+  async sendSaleConfirmationEmail(sale, customer, installments) {
+    console.log('📧 Satış onay maili gönderiliyor:', {
+      sale: {
+        id: sale.id,
+        total_amount: sale.total_amount,
+        total_with_interest: sale.total_with_interest
+      },
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email
+      }
+    });
+
+    // Taksit tablosunu oluştur
+    let installmentTable = '';
+    installments.forEach(inst => {
+      installmentTable += `
+        <tr>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${inst.installment_number}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:center">${new Date(inst.due_date).toLocaleDateString('tr-TR')}</td>
+          <td style="padding:8px;border:1px solid #ddd;text-align:right">${inst.amount.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</td>
+        </tr>
+      `;
+    });
+
+    // Ayarları getir
+    const settings = await new Promise((resolve, reject) => {
+      db.all('SELECT * FROM settings WHERE key IN (?, ?, ?)', ['company_name', 'company_iban', 'company_whatsapp'], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          const settingsMap = {};
+          rows.forEach(row => {
+            settingsMap[row.key] = row.value;
+          });
+          resolve(settingsMap);
+        }
+      });
+    });
+
     const variables = {
-      CUSTOMER_ID: customer.id,
       CUSTOMER_NAME: customer.name,
-      TOTAL_AMOUNT: sale.total_amount,
+      TOTAL_AMOUNT: sale.total_amount.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }),
+      INSTALLMENT_COUNT: installments.length,
+      FIRST_INSTALLMENT_DATE: new Date(installments[0].due_date).toLocaleDateString('tr-TR'),
+      CUSTOMER_PORTAL_LINK: 'http://localhost:3000/customer/login',
+      COMPANY_NAME: settings.company_name || 'Marka World'
+    };
+
+    await this.sendEmail(customer.email, 'sale_confirmation', variables);
+  }
+
+  async sendInstallmentPaymentEmail(sale, customer, installment, remainingAmount) {
+    console.log('📧 Taksit ödeme maili gönderiliyor:', {
+      sale: {
+        id: sale.id,
+        total_amount: sale.total_amount
+      },
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email
+      },
+      installment: {
+        number: installment.installment_number,
+        amount: installment.amount,
+        paid_date: installment.paid_date
+      }
+    });
+
+    const variables = {
+      CUSTOMER_NAME: customer.name,
+      INSTALLMENT_NUMBER: installment.installment_number,
+      PAYMENT_AMOUNT: installment.amount.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }),
+      PAYMENT_DATE: new Date(installment.paid_date).toLocaleDateString('tr-TR'),
+      REMAINING_AMOUNT: remainingAmount.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })
+    };
+
+    await this.sendEmail(customer.email, 'installment_payment', variables);
+  }
+
+  async sendSaleInfoEmail(customer, sale, installments) {
+    const template = await this.getTemplate('sale_confirmation');
+    if (!template) {
+      console.error('Satış onay mail şablonu bulunamadı');
+      return;
+    }
+
+    const installmentRows = installments.map(inst => `
+      <tr>
+        <td style="padding: 8px; border: 1px solid #ddd;">${inst.installment_number}</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">${this.formatDate(inst.due_date)}</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">${this.formatCurrency(inst.amount)}</td>
+      </tr>
+    `).join('');
+
+    const variables = {
+      CUSTOMER_NAME: customer.name,
+      SALE_ID: sale.id,
+      TOTAL_AMOUNT: this.formatCurrency(sale.total_amount),
+      TOTAL_WITH_INTEREST: this.formatCurrency(sale.total_with_interest),
       INSTALLMENT_COUNT: sale.installment_count,
-      TOTAL_WITH_INTEREST: sale.total_with_interest,
-      INSTALLMENT_AMOUNT: sale.installment_amount,
-      FIRST_PAYMENT_DATE: new Date(sale.first_payment_date).toLocaleDateString('tr-TR'),
-      APPROVAL_LINK: approvalLink,
-      COMPANY_NAME: process.env.COMPANY_NAME || 'Marka World'
+      INSTALLMENT_TABLE: installmentRows,
+      COMPANY_NAME: 'Marka World',
+      IBAN: 'TR48 0011 1000 0000 0137 1441 61',
+      WHATSAPP: '0536 832 46 60'
     };
 
-    return this.sendEmail(customer.email, 'sale_approval', variables);
+    await this.sendEmail(customer.email, 'sale_confirmation', variables);
   }
 
-  // Ödeme hatırlatma maili gönder
-  async sendPaymentReminderEmail(customer, installment) {
-    const variables = {
-      CUSTOMER_ID: customer.id,
-      CUSTOMER_NAME: customer.name,
-      DUE_DATE: new Date(installment.due_date).toLocaleDateString('tr-TR'),
-      AMOUNT: installment.amount,
-      COMPANY_NAME: process.env.COMPANY_NAME || 'Marka World'
-    };
+  async sendBulkEmail(recipients, subject, messageContent) {
+    console.log('📧 Toplu mail gönderiliyor:', {
+      recipientCount: recipients.length,
+      subject,
+      messageContent: messageContent.substring(0, 100) + '...'
+    });
 
-    return this.sendEmail(customer.email, 'payment_reminder', variables);
+    let totalSent = 0;
+    let totalFailed = 0;
+    const failedEmails = [];
+
+    for (const email of recipients) {
+      try {
+        const variables = {
+          SUBJECT: subject,
+          TITLE: subject,
+          CONTENT: messageContent,
+          BUTTON_TEXT: '',
+          BUTTON_LINK: ''
+        };
+
+        await this.sendEmail(email, 'bulk_email', variables);
+        totalSent++;
+        console.log(`✅ Mail gönderildi: ${email}`);
+      } catch (error) {
+        console.error(`❌ Mail gönderilemedi: ${email}`, error);
+        totalFailed++;
+        failedEmails.push(email);
+      }
+    }
+
+    return {
+      totalSent,
+      totalFailed,
+      failedEmails
+    };
   }
 
-  // Gecikme uyarı maili gönder
-  async sendOverduePaymentEmail(customer, installment) {
-    const variables = {
-      CUSTOMER_ID: customer.id,
-      CUSTOMER_NAME: customer.name,
-      DUE_DATE: new Date(installment.due_date).toLocaleDateString('tr-TR'),
-      AMOUNT: installment.amount,
-      CURRENT_LIMIT: customer.credit_limit,
-      COMPANY_NAME: process.env.COMPANY_NAME || 'Marka World'
-    };
-
-    return this.sendEmail(customer.email, 'payment_overdue', variables);
+  formatDate(date) {
+    return new Date(date).toLocaleDateString('tr-TR');
   }
 
-  // Müşteri aktivasyon emaili
-  async sendCustomerActivationEmail(customer) {
-    const variables = {
-      CUSTOMER_NAME: customer.name,
-      CUSTOMER_EMAIL: customer.email,
-      CREDIT_LIMIT: customer.credit_limit,
-      COMPANY_NAME: process.env.COMPANY_NAME || 'Marka World',
-      FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000'
-    };
-
-    return this.sendEmail(customer.email, 'customer_activation', variables);
+  formatCurrency(amount) {
+    return new Intl.NumberFormat('tr-TR', { 
+      style: 'currency', 
+      currency: 'TRY' 
+    }).format(amount);
   }
 }
 
-module.exports = new EmailService(); 
+// Satış onay maili şablonundan satış numarasını kaldırmak için script
+if (require.main === module && process.argv[2] === 'remove-sale-id-from-mail') {
+  const sqlite3 = require('sqlite3').verbose();
+  const path = require('path');
+  const dbPath = path.join(__dirname, '../database/database.sqlite');
+  const db = new sqlite3.Database(dbPath);
+  db.get("SELECT html FROM email_templates WHERE name = 'sale_confirmation'", (err, row) => {
+    if (err) {
+      console.error('Şablon okunamadı:', err);
+      process.exit(1);
+    }
+    if (!row) {
+      console.error('sale_confirmation şablonu bulunamadı!');
+      process.exit(1);
+    }
+    // Satış numarasını içeren satırı sil
+    let html = row.html.replace(/<[^>]*>.*\{\{SALE_ID\}\}.*<\/[^>]*>\s*/g, '');
+    html = html.replace(/Satış Numarası:.*\{\{SALE_ID\}\}.*<br\/?>(\s*)?/g, '');
+    db.run("UPDATE email_templates SET html = ? WHERE name = 'sale_confirmation'", [html], (err2) => {
+      if (err2) {
+        console.error('Şablon güncellenemedi:', err2);
+        process.exit(1);
+      }
+      console.log('Satış onay mailinden satış numarası kaldırıldı!');
+      process.exit(0);
+    });
+  });
+}
+
+module.exports = new EmailService();
+
+// Test maili göndermek için script
+if (require.main === module && process.argv[2] === 'test-mail' && process.argv[3]) {
+  (async () => {
+    try {
+      const email = process.argv[3];
+      const emailService = require('./emailService');
+      const result = await emailService.transporter.sendMail({
+        from: 'info@markaworld.com.tr',
+        to: email,
+        subject: 'Test Email',
+        html: '<h2>Marka World Test Mail</h2><p>Bu bir test mailidir.</p>'
+      });
+      console.log('✅ Test maili gönderildi:', result);
+    } catch (err) {
+      console.error('❌ Test maili gönderilemedi:', err);
+    }
+  })();
+}

@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const { db } = require('../database/init');
 const emailService = require('./emailService');
+const backupService = require('./backupService');
 
 class CronService {
   constructor() {
@@ -14,6 +15,29 @@ class CronService {
       this.dailyChecks();
     });
 
+    // Her gün saat 00:00'da çalışacak işlemler
+    const dailyTasks = cron.schedule('0 0 * * *', async () => {
+      console.log('Günlük görevler başlatılıyor...');
+
+      try {
+        // Otomatik yedek al
+        const backup = await backupService.createBackup();
+        if (backup.success) {
+          console.log(`Yedekleme başarılı: ${backup.filename}`);
+        } else {
+          console.error('Yedekleme hatası:', backup.error);
+        }
+
+        // Gecikmiş ödemeleri kontrol et
+        await this.checkOverduePayments();
+      } catch (error) {
+        console.error('Günlük görev hatası:', error);
+      }
+    }, {
+      scheduled: false,
+      timezone: "Europe/Istanbul"
+    });
+
     console.log('Cron servisi başlatıldı - Günlük kontroller saat 12:00\'da çalışacak');
   }
 
@@ -22,6 +46,7 @@ class CronService {
       await this.checkUpcomingPayments();
       await this.checkOverduePayments();
       await this.updateLateDays();
+      await this.calculateLateFees();
       console.log('Günlük kontroller tamamlandı');
     } catch (error) {
       console.error('Günlük kontroller sırasında hata:', error);
@@ -204,20 +229,118 @@ class CronService {
             return;
           }
 
-          const newLimit = customer.credit_limit * (1 - decreaseRate / 100);
-
-          db.run(
-            'UPDATE customers SET credit_limit = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-            [newLimit, customerId],
-            (err) => {
-              if (err) reject(err);
-              else {
-                console.log(`Müşteri ${customerId} limit düşürüldü: ${customer.credit_limit} -> ${newLimit}`);
-                resolve();
-              }
+          // Yeni limit hesapla
+          let newLimit = customer.credit_limit * (1 - decreaseRate / 100);
+          
+          // Limiti güncelle
+          db.run('UPDATE customers SET credit_limit = ? WHERE id = ?', [newLimit, customerId], (err) => {
+            if (err) {
+              reject(err);
+              return;
             }
-          );
+            resolve();
+          });
         });
+      });
+    });
+  }
+
+  // Gecikme faizi hesapla
+  async calculateLateFees() {
+    return new Promise((resolve, reject) => {
+      // Güncel gecikme faizi oranını al
+      db.get(`
+        SELECT annual_rate, daily_rate 
+        FROM late_payment_interest 
+        WHERE effective_from <= date('now') 
+        ORDER BY effective_from DESC LIMIT 1
+      `, [], (err, interestRate) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        if (!interestRate) {
+          console.log('Gecikme faizi oranı bulunamadı');
+          resolve();
+          return;
+        }
+
+        // Geciken ödemeleri bul
+        const query = `
+          SELECT i.*, s.customer_id
+          FROM installments i
+          JOIN sales s ON i.sale_id = s.id
+          WHERE i.status = 'overdue'
+          AND i.late_days > 0
+          AND i.late_fee_amount = 0
+        `;
+
+        db.all(query, [], async (err, installments) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          console.log(`${installments.length} geciken ödeme için faiz hesaplanacak`);
+
+          for (const installment of installments) {
+            try {
+              // Gecikme faizini hesapla
+              const lateFeeAmount = this.calculateLateFeeAmount(
+                installment.amount,
+                interestRate.daily_rate,
+                installment.late_days
+              );
+
+              // Gecikme faizini kaydet
+              await this.saveLatePaymentFee(installment.id, lateFeeAmount, installment.late_days);
+
+              // Taksit kaydını güncelle
+              await this.updateInstallmentWithLateFee(installment.id, lateFeeAmount);
+
+              console.log(`Gecikme faizi hesaplandı: Taksit #${installment.id}, Tutar: ${lateFeeAmount}`);
+            } catch (error) {
+              console.error(`Gecikme faizi hesaplama hatası (Taksit #${installment.id}):`, error);
+            }
+          }
+
+          resolve();
+        });
+      });
+    });
+  }
+
+  // Gecikme faizi tutarını hesapla
+  calculateLateFeeAmount(installmentAmount, dailyRate, lateDays) {
+    const lateFee = installmentAmount * (dailyRate / 100) * lateDays;
+    return Math.round(lateFee * 100) / 100; // 2 decimal places
+  }
+
+  // Gecikme faizini kaydet
+  saveLatePaymentFee(installmentId, amount, lateDays) {
+    return new Promise((resolve, reject) => {
+      db.run(`
+        INSERT INTO late_payment_fees (
+          installment_id, late_days, interest_amount
+        ) VALUES (?, ?, ?)
+      `, [installmentId, lateDays, amount], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  // Taksit kaydını gecikme faizi ile güncelle
+  updateInstallmentWithLateFee(installmentId, lateFeeAmount) {
+    return new Promise((resolve, reject) => {
+      db.run(`
+        UPDATE installments 
+        SET late_fee_amount = ?
+        WHERE id = ?
+      `, [lateFeeAmount, installmentId], (err) => {
+        if (err) reject(err);
+        else resolve();
       });
     });
   }
@@ -229,4 +352,6 @@ class CronService {
   }
 }
 
-module.exports = new CronService(); 
+// Tek bir instance oluştur ve export et
+const cronService = new CronService();
+module.exports = cronService; 

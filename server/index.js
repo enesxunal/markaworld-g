@@ -16,24 +16,33 @@ const adminRouter = require('./routes/admin');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Debug modunu aç
+const debug = true;
+
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true
 }));
 
-// OPTIONS requests için explicit handler
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.sendStatus(200);
-});
-
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Debug middleware - tüm istekleri logla
+if (debug) {
+  app.use((req, res, next) => {
+    console.log(`🔍 ${req.method} ${req.path}`);
+    console.log('📦 Request body:', req.body);
+    
+    // Response'u yakala
+    const oldSend = res.send;
+    res.send = function(data) {
+      console.log('📬 Response:', data);
+      oldSend.apply(res, arguments);
+    };
+    
+    next();
+  });
+}
 
 // API rotaları
 app.use('/api/customers', customersRouter);
@@ -153,7 +162,7 @@ app.get('/approve/:token', (req, res) => {
 
 // Email onay rotası
 app.get('/verify-email/:token', (req, res) => {
-  res.redirect(`/api/customers/verify-email/${req.params.token}`);
+  res.redirect(`http://localhost:3000/contract-approve/${req.params.token}`);
 });
 
 // Statik dosyalar (React build)
@@ -181,36 +190,31 @@ async function initializeDatabase() {
   try {
     await initDatabase();
     await insertDefaultData();
-    await insertDefaultEmailTemplates();
     console.log('Veritabanı hazırlandı');
   } catch (error) {
     console.error('Veritabanı başlatma hatası:', error);
+    process.exit(1);
   }
 }
 
-// Vercel için
-if (process.env.VERCEL) {
-  initializeDatabase();
-} else {
-  // Local development için sunucuyu başlat
-  async function startServer() {
-    try {
-      await initializeDatabase();
+// Sunucuyu başlat
+async function startServer() {
+  try {
+    await initializeDatabase();
+    
+    app.listen(PORT, () => {
+      console.log(`🚀 Sunucu ${PORT} portunda çalışıyor`);
       
-      app.listen(PORT, () => {
-        console.log(`🚀 Sunucu http://localhost:${PORT} adresinde çalışıyor`);
-        console.log(`📧 Mail servisi aktif`);
-        console.log(`⏰ Cron servisi aktif - Günlük kontroller saat 12:00'da çalışacak`);
-        console.log(`🏢 Şirket: ${process.env.COMPANY_NAME || 'Marka World'}`);
-      });
-      
-    } catch (error) {
-      console.error('Sunucu başlatma hatası:', error);
-      process.exit(1);
-    }
+      // Cron servisi zaten constructor'da başlatılıyor
+      console.log('⏰ Cron servisi başlatıldı');
+    });
+  } catch (error) {
+    console.error('Sunucu başlatma hatası:', error);
+    process.exit(1);
   }
-  
-  startServer();
 }
+
+// Sunucuyu başlat
+startServer();
 
 module.exports = app; 

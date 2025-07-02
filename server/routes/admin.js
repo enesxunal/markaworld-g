@@ -3,6 +3,10 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { authenticateAdmin } = require('../middleware/auth');
+const { db } = require('../database/init');
+const backupService = require('../services/backupService');
+const emailService = require('../services/emailService');
+const path = require('path');
 
 // Admin giriş bilgileri (gerçek uygulamada veritabanında olmalı)
 const ADMIN_CREDENTIALS = {
@@ -73,6 +77,136 @@ router.get('/profile', authenticateAdmin, (req, res) => {
   });
 });
 
-// ... existing code ...
+// Yedek listesini getir
+router.get('/backups', authenticateAdmin, async (req, res) => {
+  console.log('🔍 [BACKEND] /backups GET endpoint çağrıldı');
+  try {
+    const result = await backupService.getBackups();
+    console.log('🔍 [BACKEND] getBackups sonucu:', result);
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  } catch (error) {
+    console.error('🔍 [BACKEND] /backups GET hatası:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Manuel yedek al
+router.post('/backups', authenticateAdmin, async (req, res) => {
+  console.log('🔍 [BACKEND] /backups POST endpoint çağrıldı');
+  try {
+    const result = await backupService.createBackup();
+    console.log('🔍 [BACKEND] createBackup sonucu:', result);
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  } catch (error) {
+    console.error('🔍 [BACKEND] /backups POST hatası:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Yedeği geri yükle
+router.post('/backups/restore/:filename', authenticateAdmin, async (req, res) => {
+  const { filename } = req.params;
+  const result = await backupService.restoreBackup(filename);
+  if (result.success) {
+    res.json(result);
+  } else {
+    res.status(500).json(result);
+  }
+});
+
+// Yedeği sil
+router.delete('/backups/:filename', authenticateAdmin, async (req, res) => {
+  const { filename } = req.params;
+  const result = await backupService.deleteBackup(filename);
+  if (result.success) {
+    res.json(result);
+  } else {
+    res.status(500).json(result);
+  }
+});
+
+// Yedeği indir
+router.get('/backups/download/:filename', authenticateAdmin, (req, res) => {
+  const { filename } = req.params;
+  const filePath = path.join(__dirname, '..', 'backups', filename);
+  res.download(filePath, filename, (err) => {
+    if (err) {
+      res.status(500).json({ success: false, error: 'Dosya indirme hatası' });
+    }
+  });
+});
+
+// Tüm müşterileri getir
+router.get('/customers/emails', authenticateAdmin, (req, res) => {
+  const query = `
+    SELECT DISTINCT email 
+    FROM customers 
+    WHERE email IS NOT NULL 
+    AND email_verified = 1 
+    AND unsubscribed = 0
+  `;
+
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      console.error('Müşteri email listesi hatası:', err);
+      res.status(500).json({
+        success: false,
+        error: 'Müşteri listesi alınamadı'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      emails: rows.map(row => row.email)
+    });
+  });
+});
+
+// Toplu mail gönder
+router.post('/send-bulk-email', authenticateAdmin, async (req, res) => {
+  try {
+    const { recipients, subject, messageContent } = req.body;
+
+    // Validasyon
+    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Geçerli alıcı listesi gerekli'
+      });
+    }
+
+    if (!subject || !messageContent) {
+      return res.status(400).json({
+        success: false,
+        error: 'Konu ve mesaj içeriği gerekli'
+      });
+    }
+
+    // Mailleri gönder
+    const result = await emailService.sendBulkEmail(recipients, subject, messageContent);
+
+    res.json({
+      success: true,
+      message: `${result.totalSent} mail başarıyla gönderildi, ${result.totalFailed} mail başarısız`,
+      ...result
+    });
+
+  } catch (error) {
+    console.error('Toplu mail gönderme hatası:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Mail gönderimi sırasında bir hata oluştu'
+    });
+  }
+});
 
 module.exports = router; 

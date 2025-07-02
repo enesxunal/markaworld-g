@@ -1,32 +1,60 @@
 const jwt = require('jsonwebtoken');
+const db = require('../database/init');
 
 // Admin authentication middleware
 const authenticateAdmin = (req, res, next) => {
   try {
+    console.log('🔍 [AUTH] Admin authentication başladı');
+    console.log('🔍 [AUTH] Request path:', req.path);
+    console.log('🔍 [AUTH] Request method:', req.method);
+    console.log('🔍 [AUTH] All headers:', req.headers);
+    console.log('🔍 [AUTH] Authorization header:', req.header('Authorization'));
+
     const token = req.header('Authorization')?.replace('Bearer ', '');
+    console.log('🔍 [AUTH] Extracted token:', token ? 'Token mevcut' : 'Token bulunamadı');
     
     if (!token) {
+      console.log('🔍 [AUTH] HATA: Token bulunamadı');
       return res.status(401).json({
         success: false,
         error: 'Erişim token\'ı bulunamadı'
       });
     }
 
+    console.log('🔍 [AUTH] JWT_SECRET:', process.env.JWT_SECRET || 'marka-world-secret-key');
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'marka-world-secret-key');
+    console.log('🔍 [AUTH] Token çözümlendi:', {
+      username: decoded.username,
+      role: decoded.role,
+      loginTime: decoded.loginTime
+    });
     
-    if (decoded.role !== 'admin') {
+    if (!decoded || !decoded.username || decoded.role !== 'admin') {
+      console.log('🔍 [AUTH] HATA: Admin yetkisi yok', {
+        decoded: decoded,
+        hasUsername: !!decoded?.username,
+        role: decoded?.role
+      });
       return res.status(403).json({
         success: false,
-        error: 'Admin yetkisi gerekli'
+        error: 'Bu işlem için admin yetkisi gerekli'
       });
     }
 
-    req.admin = decoded;
+    // Admin bilgilerini token'dan al
+    req.admin = {
+      username: decoded.username,
+      role: decoded.role,
+      loginTime: decoded.loginTime
+    };
+    console.log('🔍 [AUTH] Başarılı admin authentication:', req.admin);
     next();
+
   } catch (error) {
+    console.error('🔍 [AUTH] JWT Hata:', error);
     res.status(401).json({
       success: false,
-      error: 'Geçersiz token'
+      error: 'Geçersiz veya süresi dolmuş token'
     });
   }
 };
