@@ -13,5 +13,9 @@
   "license": "MIT",
   "engines": {
     "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.0.1",
+    "googleapis": "^150.0.1"
   }
-} 
+}

@@ -1,6 +1,8 @@
 const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 // Veritabanı bağlantısı
 const dbPath = path.join(__dirname, '../database/database.sqlite');
@@ -13,59 +15,37 @@ class EmailService {
   }
 
   initTransporter() {
-    const host = process.env.EMAIL_HOST || 'fr-astral.guzelhosting.com';
-    const port = parseInt(process.env.EMAIL_PORT) || 465;
-    const secure = true;
-    const user = process.env.EMAIL_USER || 'info@markaworld.com.tr';
-    const pass = process.env.EMAIL_PASS || 'w0;d;JiZ8a,v';
-
-    console.log('📧 Email sunucusu yapılandırılıyor:', {
-      host,
-      port,
-      secure,
-      user
-    });
+    // Google OAuth2 ile Gmail API üzerinden mail gönderimi
+    const oAuth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
+    );
+    oAuth2Client.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
 
     this.transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
+      service: 'gmail',
       auth: {
-        user,
-        pass
-      },
-      tls: {
-        rejectUnauthorized: false
-      },
-      debug: true
+        type: 'OAuth2',
+        user: process.env.EMAIL_USER,
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+        accessToken: oAuth2Client.getAccessToken()
+      }
     });
+    console.log('Gmail OAuth2 ile mail gönderimi yapılandırıldı.');
+  }
 
-    // Bağlantıyı test et
-    this.transporter.verify()
-      .then(() => {
-        console.log('✅ Email sunucusu bağlantısı başarılı');
-        
-        // Test e-postası gönder
-        const testMailOptions = {
-          from: user,
-          to: user,
-          subject: 'Bağlantı Testi',
-          text: 'Bu bir test e-postasıdır. E-posta sunucusu bağlantısı başarılı.'
-        };
-        
-        return this.transporter.sendMail(testMailOptions);
-      })
-      .then(() => {
-        console.log('✅ Test e-postası başarıyla gönderildi');
-      })
-      .catch((error) => {
-        console.error('❌ Email sunucusu bağlantı hatası:', error);
-        if (error.code === 'EAUTH') {
-          console.error('❌ Kimlik doğrulama hatası: Kullanıcı adı veya şifre hatalı');
-        } else if (error.code === 'ESOCKET') {
-          console.error('❌ Bağlantı hatası: Sunucuya ulaşılamıyor');
-        }
-      });
+  async sendMail(options) {
+    try {
+      let info = await this.transporter.sendMail(options);
+      console.log('Mail gönderildi:', info.messageId);
+      return info;
+    } catch (err) {
+      console.error('Mail gönderme hatası:', err);
+      throw err;
+    }
   }
 
   getTemplate(templateName) {
@@ -134,13 +114,13 @@ class EmailService {
 
       // Maili gönder
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'info@markaworld.com.tr',
+        from: 'info@markaworld.com.tr',
         to,
         subject,
         html
       };
 
-      await this.transporter.sendMail(mailOptions);
+      await this.sendMail(mailOptions);
       await this.logEmail(to, templateName, true);
       console.log('✅ Email başarıyla gönderildi:', to);
     } catch (error) {
@@ -163,7 +143,7 @@ class EmailService {
     const variables = {
       CUSTOMER_ID: customer.id,
       CUSTOMER_NAME: customer.name,
-      VERIFICATION_URL: `http://localhost:3000/api/customers/verify-email/${verificationToken}`,
+      VERIFICATION_URL: `https://markaworld.com.tr/api/customers/verify-email/${verificationToken}`,
       COMPANY_NAME: 'Marka World'
     };
 
@@ -370,7 +350,7 @@ if (require.main === module && process.argv[2] === 'test-mail' && process.argv[3
       const email = process.argv[3];
       const emailService = require('./emailService');
       const result = await emailService.transporter.sendMail({
-        from: 'info@markaworld.com.tr',
+        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
         to: email,
         subject: 'Test Email',
         html: '<h2>Marka World Test Mail</h2><p>Bu bir test mailidir.</p>'

@@ -189,7 +189,7 @@ app.use((req, res) => {
 async function initializeDatabase() {
   try {
     await initDatabase();
-    await insertDefaultData();
+    // await insertDefaultData(); // Otomatik test verisi eklenmesin diye kaldırıldı
     console.log('Veritabanı hazırlandı');
   } catch (error) {
     console.error('Veritabanı başlatma hatası:', error);
