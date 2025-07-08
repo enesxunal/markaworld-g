@@ -1,5 +1,5 @@
-const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
+const nodemailer = require('nodemailer');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
@@ -7,6 +7,35 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 // Veritabanı bağlantısı
 const dbPath = path.join(__dirname, '../database/database.sqlite');
 const db = new sqlite3.Database(dbPath);
+
+const oAuth2Client = new google.auth.OAuth2(
+  process.env.GMAIL_CLIENT_ID,
+  process.env.GMAIL_CLIENT_SECRET,
+  'https://developers.google.com/oauthplayground'
+);
+oAuth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
+
+async function sendMail(to, subject, html) {
+  const accessToken = await oAuth2Client.getAccessToken();
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      type: 'OAuth2',
+      user: process.env.GMAIL_USER,
+      clientId: process.env.GMAIL_CLIENT_ID,
+      clientSecret: process.env.GMAIL_CLIENT_SECRET,
+      refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+      accessToken: accessToken.token,
+    },
+  });
+
+  await transporter.sendMail({
+    from: process.env.GMAIL_USER,
+    to,
+    subject,
+    html,
+  });
+}
 
 class EmailService {
   constructor() {
@@ -16,22 +45,14 @@ class EmailService {
 
   initTransporter() {
     // Google OAuth2 ile Gmail API üzerinden mail gönderimi
-    const oAuth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI
-    );
-    oAuth2Client.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
-
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         type: 'OAuth2',
-        user: process.env.EMAIL_USER,
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-        accessToken: oAuth2Client.getAccessToken()
+        user: process.env.GMAIL_USER,
+        clientId: process.env.GMAIL_CLIENT_ID,
+        clientSecret: process.env.GMAIL_CLIENT_SECRET,
+        refreshToken: process.env.GMAIL_REFRESH_TOKEN,
       }
     });
     console.log('Gmail OAuth2 ile mail gönderimi yapılandırıldı.');
@@ -114,7 +135,7 @@ class EmailService {
 
       // Maili gönder
       const mailOptions = {
-        from: 'info@markaworld.com.tr',
+        from: process.env.GMAIL_USER,
         to,
         subject,
         html
@@ -350,7 +371,7 @@ if (require.main === module && process.argv[2] === 'test-mail' && process.argv[3
       const email = process.argv[3];
       const emailService = require('./emailService');
       const result = await emailService.transporter.sendMail({
-        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        from: process.env.GMAIL_USER,
         to: email,
         subject: 'Test Email',
         html: '<h2>Marka World Test Mail</h2><p>Bu bir test mailidir.</p>'
