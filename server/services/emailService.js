@@ -23,13 +23,67 @@ function hasGmailOAuth() {
   );
 }
 
+function isPlaceholderSecret(value) {
+  if (!value) return true;
+  const v = value.toLowerCase();
+  return (
+    v.includes('buraya') ||
+    v.includes('your-') ||
+    v.includes('degistirin') ||
+    v.includes('ornek') ||
+    v === 'changeme'
+  );
+}
+
 function hasSmtpConfig() {
-  return Boolean(process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS);
+  return Boolean(
+    process.env.EMAIL_HOST &&
+    process.env.EMAIL_USER &&
+    process.env.EMAIL_PASS &&
+    !isPlaceholderSecret(process.env.EMAIL_PASS)
+  );
+}
+
+async function createGmailTransporter() {
+  const { google } = require('googleapis');
+  const oAuth2Client = new google.auth.OAuth2(
+    process.env.GMAIL_CLIENT_ID,
+    process.env.GMAIL_CLIENT_SECRET,
+    'https://developers.google.com/oauthplayground'
+  );
+  oAuth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
+
+  const accessToken = await oAuth2Client.getAccessToken();
+
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      type: 'OAuth2',
+      user: process.env.GMAIL_USER,
+      clientId: process.env.GMAIL_CLIENT_ID,
+      clientSecret: process.env.GMAIL_CLIENT_SECRET,
+      refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+      accessToken: accessToken.token
+    }
+  });
 }
 
 async function createTransporter() {
   if (cachedTransporter) {
     return cachedTransporter;
+  }
+
+  // Önce Gmail OAuth (sizin kurduğunuz yöntem)
+  if (hasGmailOAuth()) {
+    try {
+      cachedTransporter = await createGmailTransporter();
+      console.log('✅ E-posta: Gmail OAuth hazır (%s)', process.env.GMAIL_USER);
+      return cachedTransporter;
+    } catch (err) {
+      console.error('❌ Gmail OAuth hatası:', err.message);
+      if (!hasSmtpConfig()) throw err;
+      console.log('↪ SMTP ile deneniyor...');
+    }
   }
 
   if (hasSmtpConfig()) {
@@ -46,32 +100,8 @@ async function createTransporter() {
       await cachedTransporter.verify();
       console.log('✅ E-posta: SMTP hazır (%s)', process.env.EMAIL_HOST);
     } catch (err) {
-      console.warn('⚠️ SMTP verify uyarısı (sunucu yine de başlar):', err.message);
+      console.warn('⚠️ SMTP verify uyarısı:', err.message);
     }
-    return cachedTransporter;
-  }
-
-  if (hasGmailOAuth()) {
-    const { google } = require('googleapis');
-    const oAuth2Client = new google.auth.OAuth2(
-      process.env.GMAIL_CLIENT_ID,
-      process.env.GMAIL_CLIENT_SECRET,
-      'https://developers.google.com/oauthplayground'
-    );
-    oAuth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
-
-    cachedTransporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        type: 'OAuth2',
-        user: process.env.GMAIL_USER,
-        clientId: process.env.GMAIL_CLIENT_ID,
-        clientSecret: process.env.GMAIL_CLIENT_SECRET,
-        refreshToken: process.env.GMAIL_REFRESH_TOKEN,
-        accessToken: (await oAuth2Client.getAccessToken()).token
-      }
-    });
-    console.log('✅ E-posta: Gmail OAuth hazır');
     return cachedTransporter;
   }
 
