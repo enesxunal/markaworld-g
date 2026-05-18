@@ -1,4 +1,3 @@
-const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
@@ -43,12 +42,17 @@ async function createTransporter() {
         pass: process.env.EMAIL_PASS
       }
     });
-    await cachedTransporter.verify();
-    console.log('✅ E-posta: SMTP hazır (%s)', process.env.EMAIL_HOST);
+    try {
+      await cachedTransporter.verify();
+      console.log('✅ E-posta: SMTP hazır (%s)', process.env.EMAIL_HOST);
+    } catch (err) {
+      console.warn('⚠️ SMTP verify uyarısı (sunucu yine de başlar):', err.message);
+    }
     return cachedTransporter;
   }
 
   if (hasGmailOAuth()) {
+    const { google } = require('googleapis');
     const oAuth2Client = new google.auth.OAuth2(
       process.env.GMAIL_CLIENT_ID,
       process.env.GMAIL_CLIENT_SECRET,
