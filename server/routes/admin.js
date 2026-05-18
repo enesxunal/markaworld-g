@@ -8,23 +8,36 @@ const backupService = require('../services/backupService');
 const emailService = require('../services/emailService');
 const path = require('path');
 
-// Admin giriş bilgileri (gerçek uygulamada veritabanında olmalı)
-const ADMIN_CREDENTIALS = {
-  username: 'markaworld',
-  password: 'Marka60..' // Gerçek uygulamada hash'lenmiş olmalı
-};
+function getAdminCredentials() {
+  return {
+    username: process.env.ADMIN_USERNAME || 'markaworld',
+    password: process.env.ADMIN_PASSWORD
+  };
+}
 
 // Admin giriş
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
+    const admin = getAdminCredentials();
 
-    // Kullanıcı adı ve şifre kontrolü
-    if (username !== ADMIN_CREDENTIALS.username || password !== ADMIN_CREDENTIALS.password) {
+    if (!admin.password) {
+      console.error('ADMIN_PASSWORD tanımlı değil (.env)');
+      return res.status(503).json({
+        success: false,
+        error: 'Sunucu yapılandırması eksik'
+      });
+    }
+
+    if (username !== admin.username || password !== admin.password) {
       return res.status(401).json({
         success: false,
         error: 'Kullanıcı adı veya şifre hatalı'
       });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      return res.status(503).json({ success: false, error: 'Sunucu yapılandırması eksik' });
     }
 
     // JWT token oluştur
@@ -34,7 +47,7 @@ router.post('/login', async (req, res) => {
         role: 'admin',
         loginTime: new Date()
       },
-      process.env.JWT_SECRET || 'marka-world-secret-key',
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 

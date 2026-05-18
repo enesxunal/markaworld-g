@@ -6,8 +6,8 @@ const crypto = require('crypto');
 const router = express.Router();
 const auth = require('../middleware/auth');
 
-// Tüm satışları listele
-router.get('/', (req, res) => {
+// Tüm satışları listele (admin)
+router.get('/', auth.authenticateAdmin, (req, res) => {
   const { customer_id, status } = req.query;
   
   let query = `
@@ -149,8 +149,8 @@ router.get('/future-payments', auth.authenticateAdmin, async (req, res) => {
   }
 });
 
-// Yaklaşan taksitleri getir (dashboard için)
-router.get('/installments/upcoming', (req, res) => {
+// Yaklaşan taksitleri getir (admin dashboard)
+router.get('/installments/upcoming', auth.authenticateAdmin, (req, res) => {
   const { days = 5 } = req.query;
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + parseInt(days));
@@ -176,8 +176,8 @@ router.get('/installments/upcoming', (req, res) => {
   });
 });
 
-// Satış detayı ve taksitlerini getir
-router.get('/:id', (req, res) => {
+// Satış detayı ve taksitlerini getir (admin)
+router.get('/:id', auth.authenticateAdmin, (req, res) => {
   const saleId = req.params.id;
 
   // Satış bilgisini getir
@@ -238,8 +238,8 @@ router.get('/:id', (req, res) => {
   });
 });
 
-// Yeni taksitli satış oluştur
-router.post('/', [
+// Yeni taksitli satış oluştur (admin)
+router.post('/', auth.authenticateAdmin, [
   body('customer_id').isInt({ min: 1 }).withMessage('Geçerli müşteri seçin'),
   body('total_amount').isFloat({ min: 0.01 }).withMessage('Tutar pozitif olmalı'),
   body('installment_count').isIn([1, 2, 3, 4, 5]).withMessage('Taksit sayısı 1-5 arasında olmalı')

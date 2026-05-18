@@ -6,7 +6,7 @@ const path = require('path');
 // Veritabanı ve servisler
 const { initDatabase, insertDefaultData, insertDefaultEmailTemplates } = require('./database/init');
 const cronService = require('./services/cronService');
-
+const { authenticateAdmin } = require('./middleware/auth');
 // Rotalar
 const customersRouter = require('./routes/customers');
 const salesRouter = require('./routes/sales');
@@ -16,12 +16,24 @@ const adminRouter = require('./routes/admin');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Debug modunu aç
-const debug = true;
+const debug = process.env.NODE_ENV !== 'production';
 
 // Middleware
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://markaworld.com.tr',
+  'https://www.markaworld.com.tr',
+  'http://localhost:3000'
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
   credentials: true
 }));
 
@@ -59,8 +71,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Manuel cron tetikleme (test için)
-app.post('/api/admin/run-daily-checks', async (req, res) => {
+// Manuel cron tetikleme (sadece admin)
+app.post('/api/admin/run-daily-checks', authenticateAdmin, async (req, res) => {
   try {
     await cronService.runDailyChecksNow();
     res.json({ message: 'Günlük kontroller başarıyla çalıştırıldı' });
@@ -160,9 +172,10 @@ app.get('/approve/:token', (req, res) => {
   res.send(html);
 });
 
-// Email onay rotası
+// Eski backend doğrulama linki → React sayfasına yönlendir
 app.get('/verify-email/:token', (req, res) => {
-  res.redirect(`http://localhost:3000/contract-approve/${req.params.token}`);
+  const base = (process.env.FRONTEND_URL || 'https://markaworld.com.tr').replace(/\/$/, '');
+  res.redirect(`${base}/verify-email/${req.params.token}`);
 });
 
 // Statik dosyalar (React build)

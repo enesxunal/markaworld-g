@@ -6,6 +6,7 @@ api/node_modules/
 # Environment variables
 .env
 server/.env
+Server-credentials.md
 
 # Database
 *.sqlite

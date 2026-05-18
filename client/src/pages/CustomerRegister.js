@@ -53,6 +53,9 @@ const CustomerRegister = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [registrationComplete, setRegistrationComplete] = useState(false);
+  const [emailSent, setEmailSent] = useState(true);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -140,6 +143,7 @@ const CustomerRegister = () => {
       const response = await customerAPI.register(submitData);
       
       if (response.data.success) {
+        setEmailSent(response.data.emailSent !== false);
         setRegistrationComplete(true);
         setActiveStep(2);
       }
@@ -443,19 +447,48 @@ const CustomerRegister = () => {
             >
               Kayıt Başarılı!
             </Typography>
-            <Typography 
-              variant="body1" 
-              color="text.secondary" 
-              paragraph
-              sx={{ 
-                fontSize: isMobile ? '0.9rem' : '1rem',
-                lineHeight: 1.6,
-                maxWidth: '400px',
-                mx: 'auto'
-              }}
-            >
-              Email adresinize gönderilen onay linkine tıklayarak hesabınızı aktifleştirin.
-            </Typography>
+            {emailSent ? (
+              <Typography 
+                variant="body1" 
+                color="text.secondary" 
+                paragraph
+                sx={{ fontSize: isMobile ? '0.9rem' : '1rem', lineHeight: 1.6, maxWidth: '400px', mx: 'auto' }}
+              >
+                <strong>{formData.email}</strong> adresine doğrulama linki gönderildi.
+                Gelen kutusu ve spam klasörünü kontrol edin.
+              </Typography>
+            ) : (
+              <Alert severity="warning" sx={{ mb: 2, textAlign: 'left', maxWidth: 400, mx: 'auto' }}>
+                Kayıt oluşturuldu ancak doğrulama e-postası gönderilemedi.
+                Aşağıdaki butonla tekrar deneyin.
+              </Alert>
+            )}
+            {resendMessage && (
+              <Alert severity="info" sx={{ mb: 2, maxWidth: 400, mx: 'auto' }}>
+                {resendMessage}
+              </Alert>
+            )}
+            {!emailSent && (
+              <Button
+                variant="outlined"
+                disabled={resendLoading}
+                onClick={async () => {
+                  try {
+                    setResendLoading(true);
+                    const res = await customerAPI.resendVerification(formData.email);
+                    setResendMessage(res.data.message);
+                    setEmailSent(true);
+                  } catch (err) {
+                    setResendMessage(err.response?.data?.error || 'E-posta gönderilemedi');
+                  } finally {
+                    setResendLoading(false);
+                  }
+                }}
+                sx={{ mb: 2 }}
+              >
+                {resendLoading ? 'Gönderiliyor...' : 'Doğrulama E-postasını Tekrar Gönder'}
+              </Button>
+            )}
             <Button
               variant="contained"
               onClick={() => navigate('/customer-login')}

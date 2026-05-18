@@ -44,8 +44,8 @@ function App() {
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/customer-login" element={<CustomerLogin />} />
             <Route path="/customer-register" element={<CustomerRegister />} />
-            <Route path="/api/customers/verify-email/:token" element={<EmailVerification />} />
             <Route path="/verify-email/:token" element={<EmailVerification />} />
+            <Route path="/contract-approve/:token" element={<EmailVerification />} />
             <Route path="/contracts/:token" element={<EmailVerification />} />
             <Route path="/register" element={<CustomerRegister />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />

@@ -1,14 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const { db } = require('../database/init');
 const emailService = require('../services/emailService');
+const { authenticateAdmin } = require('../middleware/auth');
 
-// Veritabanı bağlantısı
-const db = new sqlite3.Database(path.join(__dirname, '../database/database.sqlite'));
-
-// Test mail gönder
-router.post('/test', async (req, res) => {
+// Test mail gönder (admin)
+router.post('/test', authenticateAdmin, async (req, res) => {
   const { email } = req.body;
   
   if (!email) {
@@ -19,11 +16,10 @@ router.post('/test', async (req, res) => {
     console.log('📧 Test mail gönderiliyor:', email);
     
     // Test maili gönder
-    const result = await emailService.transporter.sendMail({
-      from: '"Marka World" <info@markaworld.com.tr>',
-      to: email,
-      subject: 'Test Email',
-      html: `
+    await emailService.sendMail(
+      email,
+      'Test Email — Marka World',
+      `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px;">
           <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
             <div style="text-align: center; margin-bottom: 30px;">
@@ -51,13 +47,10 @@ router.post('/test', async (req, res) => {
           </div>
         </div>
       `
-    });
+    );
 
-    console.log('✅ Test mail gönderildi:', result);
-    
-    res.json({ 
-      message: 'Test mail gönderildi',
-      result 
+    res.json({
+      message: 'Test mail gönderildi'
     });
   } catch (error) {
     console.error('❌ Test mail hatası:', error);
@@ -99,8 +92,8 @@ router.post('/subscribe', (req, res) => {
   );
 });
 
-// Mail listesini getir
-router.get('/list', (req, res) => {
+// Mail listesini getir (admin)
+router.get('/list', authenticateAdmin, (req, res) => {
   db.all('SELECT email FROM emails', [], (err, rows) => {
     if (err) {
       return res.status(500).json({ message: 'Liste alınamadı' });
@@ -109,8 +102,8 @@ router.get('/list', (req, res) => {
   });
 });
 
-// Mail şablonlarını kontrol et
-router.get('/templates', async (req, res) => {
+// Mail şablonlarını kontrol et (admin)
+router.get('/templates', authenticateAdmin, async (req, res) => {
   try {
     const templates = await new Promise((resolve, reject) => {
       db.all('SELECT name, subject FROM email_templates', (err, rows) => {
@@ -133,8 +126,8 @@ router.get('/templates', async (req, res) => {
   }
 });
 
-// customer_registration şablonunu ekle
-router.post('/add-customer-registration-template', async (req, res) => {
+// customer_registration şablonunu ekle (admin)
+router.post('/add-customer-registration-template', authenticateAdmin, async (req, res) => {
   try {
     const template = {
       name: 'customer_registration',
@@ -180,8 +173,8 @@ router.post('/add-customer-registration-template', async (req, res) => {
   }
 });
 
-// Eksik mail şablonlarını ekle
-router.post('/add-missing-templates', async (req, res) => {
+// Eksik mail şablonlarını ekle (admin)
+router.post('/add-missing-templates', authenticateAdmin, async (req, res) => {
   try {
     const templates = [
       {

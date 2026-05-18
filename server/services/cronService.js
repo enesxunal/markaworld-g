@@ -34,8 +34,8 @@ class CronService {
         console.error('Günlük görev hatası:', error);
       }
     }, {
-      scheduled: false,
-      timezone: "Europe/Istanbul"
+      scheduled: true,
+      timezone: 'Europe/Istanbul'
     });
 
     console.log('Cron servisi başlatıldı - Günlük kontroller saat 12:00\'da çalışacak');

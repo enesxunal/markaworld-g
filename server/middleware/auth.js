@@ -21,8 +21,12 @@ const authenticateAdmin = (req, res, next) => {
       });
     }
 
-    console.log('🔍 [AUTH] JWT_SECRET:', process.env.JWT_SECRET || 'marka-world-secret-key');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'marka-world-secret-key');
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('JWT_SECRET tanımlı değil (.env)');
+      return res.status(503).json({ success: false, error: 'Sunucu yapılandırması eksik' });
+    }
+    const decoded = jwt.verify(token, jwtSecret);
     console.log('🔍 [AUTH] Token çözümlendi:', {
       username: decoded.username,
       role: decoded.role,
@@ -71,7 +75,11 @@ const authenticateCustomer = (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'marka-world-secret-key');
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return res.status(503).json({ success: false, error: 'Sunucu yapılandırması eksik' });
+    }
+    const decoded = jwt.verify(token, jwtSecret);
     req.customer = decoded;
     next();
   } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -12,27 +12,29 @@ import {
   StepLabel,
   Checkbox,
   FormControlLabel,
-  Divider
+  TextField
 } from '@mui/material';
 import {
   CheckCircle,
-  Error,
+  Error as ErrorIcon,
   Description,
   Security,
   Gavel
 } from '@mui/icons-material';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { customerAPI } from '../services/api';
 
-const steps = ['Email Onayı', 'Sözleşme Onayı', 'Hesap Aktif'];
+const steps = ['E-posta Onayı', 'Sözleşme Onayı', 'Hesap Aktif'];
 
 const EmailVerification = () => {
   const { token } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [resendEmail, setResendEmail] = useState('');
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
   const [customer, setCustomer] = useState(null);
   const [agreements, setAgreements] = useState({
     kvkk: false,
@@ -40,36 +42,62 @@ const EmailVerification = () => {
     electronic: false
   });
 
-  useEffect(() => {
+  const verifyEmail = useCallback(async () => {
     if (!token) {
       setError('Geçersiz doğrulama linki');
+      setLoading(false);
       return;
     }
-    verifyEmail();
-  }, [token]);
 
-  const verifyEmail = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await customerAPI.verifyEmail(token);
-      
+
       if (response.data.success) {
+        if (response.data.alreadyActive) {
+          navigate('/customer-login', {
+            state: { message: response.data.message || 'Hesabınız zaten aktif. Giriş yapabilirsiniz.' }
+          });
+          return;
+        }
         setCustomer(response.data.customer);
-        setActiveStep(1); // Her zaman sözleşme adımına geç
+        setActiveStep(1);
       }
-    } catch (error) {
-      setError(error.response?.data?.error || 'Email onayı başarısız');
+    } catch (err) {
+      setError(err.response?.data?.error || 'E-posta onayı başarısız');
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, navigate]);
+
+  useEffect(() => {
+    verifyEmail();
+  }, [verifyEmail]);
 
   const handleAgreementChange = (type) => {
-    setAgreements(prev => ({
+    setAgreements((prev) => ({
       ...prev,
       [type]: !prev[type]
     }));
-    setError(''); // Sözleşme onayı değiştiğinde hata mesajını temizle
+    setError('');
+  };
+
+  const handleResend = async () => {
+    if (!resendEmail.trim()) {
+      setResendMessage('Lütfen kayıt sırasında kullandığınız e-posta adresini girin.');
+      return;
+    }
+    try {
+      setResendLoading(true);
+      setResendMessage('');
+      const response = await customerAPI.resendVerification(resendEmail.trim());
+      setResendMessage(response.data.message || 'E-posta gönderildi.');
+    } catch (err) {
+      setResendMessage(err.response?.data?.error || 'E-posta gönderilemedi.');
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   const handleCompleteRegistration = async () => {
@@ -80,20 +108,19 @@ const EmailVerification = () => {
 
     try {
       setLoading(true);
-      setError(''); // Hata mesajını temizle
+      setError('');
       const response = await customerAPI.completeRegistration(token, agreements);
-      
+
       if (response.data.success) {
         setActiveStep(2);
-        // 3 saniye sonra giriş sayfasına yönlendir
         setTimeout(() => {
-          navigate('/customer-login', { 
+          navigate('/customer-login', {
             state: { message: 'Hesabınız başarıyla aktifleştirildi! Giriş yapabilirsiniz.' }
           });
         }, 3000);
       }
-    } catch (error) {
-      setError(error.response?.data?.error || 'Sözleşme onayı başarısız');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Sözleşme onayı başarısız');
     } finally {
       setLoading(false);
     }
@@ -106,7 +133,7 @@ const EmailVerification = () => {
           <Box textAlign="center" py={4}>
             <CircularProgress size={60} />
             <Typography variant="h6" sx={{ mt: 2 }}>
-              Email onayınız kontrol ediliyor...
+              E-posta onayınız kontrol ediliyor...
             </Typography>
           </Box>
         );
@@ -116,54 +143,22 @@ const EmailVerification = () => {
           <Box>
             <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <CheckCircle color="success" />
-              Email Onaylandı!
+              E-posta Onaylandı!
             </Typography>
-            
+
             <Alert severity="info" sx={{ mb: 3 }}>
-              Sayın <strong>{customer?.name}</strong>, email adresiniz başarıyla onaylandı. 
-              Hesabınızı aktifleştirmek için aşağıdaki sözleşmeleri onaylamanız gerekmektedir.
+              Sayın <strong>{customer?.name}</strong>, e-posta adresiniz onaylandı.
+              Hesabınızı aktifleştirmek için aşağıdaki sözleşmeleri onaylayın.
             </Alert>
 
-            {/* KVKK Aydınlatma Metni */}
             <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
               <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <Security color="primary" />
                 KVKK Aydınlatma Metni
               </Typography>
               <Box sx={{ maxHeight: 200, overflow: 'auto', mb: 2, p: 1, bgcolor: 'grey.50' }}>
-                <Typography variant="body2" paragraph>
-                  <strong>Değerli Müşterimiz,</strong>
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, 
-                  "3 KARE YAZILIM VE TASARIM AJANSI LİMİTED ŞİRKETİ" olarak, 
-                  kişisel verilerinizin gizliliğini ve güvenliğini önemsemekteyiz.
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  Tarafımıza sağlamış olduğunuz kişisel veriler;
-                </Typography>
-                <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
-                  <li>Satış süreçlerinin yürütülmesi,</li>
-                  <li>Taksitli satış sözleşmelerinin oluşturulması ve takibi,</li>
-                  <li>Ödeme planlarının yönetilmesi,</li>
-                  <li>Yasal yükümlülüklerin yerine getirilmesi ve</li>
-                  <li>Sözleşme bilgilendirmelerinin yapılması</li>
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  amaçlarıyla işlenmektedir.
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  Kişisel verileriniz yalnızca yetkili firma personelleri tarafından erişilebilecek 
-                  şekilde saklanacak ve hiçbir şekilde üçüncü taraflarla paylaşılmayacaktır.
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  Veri sorumlusu sıfatıyla şirket sahibi tarafından yönetilen bu süreçte, 
-                  kişisel verileriniz 5 yıl süreyle saklanacak olup, KVKK kapsamındaki haklarınızı 
-                  kullanmak için info@markaworld.com.tr adresinden bizimle iletişime geçebilirsiniz.
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                  Saygılarımızla,<br />
-                  3 KARE YAZILIM VE TASARIM AJANSI LİMİTED ŞİRKETİ
+                <Typography variant="body2">
+                  Kişisel verileriniz satış ve taksit takibi amacıyla işlenir. Detaylar için info@markaworld.com.tr
                 </Typography>
               </Box>
               <FormControlLabel
@@ -178,65 +173,14 @@ const EmailVerification = () => {
               />
             </Paper>
 
-            {/* Taksitli Satış Sözleşmesi */}
             <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
               <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <Description color="primary" />
                 Taksitli Satış Sözleşmesi
               </Typography>
               <Box sx={{ maxHeight: 200, overflow: 'auto', mb: 2, p: 1, bgcolor: 'grey.50' }}>
-                <Typography variant="body2" paragraph>
-                  <strong>Taraflar:</strong>
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  <strong>Satıcı:</strong><br />
-                  3 KARE YAZILIM VE TASARIM AJANSI LİMİTED ŞİRKETİ<br />
-                  Karşıyaka Mah. Vali Ayhan Çevik Bulvarı 46/A<br />
-                  Merkez / TOKAT<br />
-                  Vergi Dairesi: Güngören<br />
-                  Vergi No: 0012587682<br />
-                  E-posta: info@markaworld.com.tr
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  <strong>Alıcı:</strong><br />
-                  Adı Soyadı: {customer?.name}<br />
-                  T.C. Kimlik No: {customer?.tc_no}<br />
-                  Telefon: {customer?.phone}<br />
-                  E-posta: {customer?.email}<br />
-                  Adres: {customer?.address || 'Belirtilmemiş'}
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  <strong>Madde 1 – Konu</strong><br />
-                  İşbu sözleşme, Alıcı'nın Satıcıdan satın aldığı kadın, erkek ve çocuk giyim 
-                  ürünlerine ilişkin taksitli ödeme koşullarını düzenlemektedir.
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  <strong>Madde 2 – Ürün Bilgileri ve Bedeli</strong><br />
-                  Alıcı aşağıda belirtilen ürün/hizmeti taksitli olarak satın almayı kabul eder:
-                </Typography>
-                <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
-                  <li>Ürün: Kadın, Erkek, Çocuk Giyim</li>
-                  <li>Kredi Limiti: {customer?.credit_limit}₺</li>
-                  <li>Faiz oranları satış sırasında sistem tarafından belirlenecektir.</li>
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  <strong>Madde 3 – Ödeme Şartları</strong><br />
-                  - Taksitler eşit tutarlarda olup her ayın aynı gününde ödenecektir.<br />
-                  - Ödeme gecikmeleri durumunda gecikme faizi uygulanabilir.<br />
-                  - Ödeme yapılmadığı takdirde sistem limiti otomatik olarak düşürecektir.<br />
-                  - Düzenli yapılan ödemelerde müşteri limiti sistem tarafından %20 artırılacaktır.
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  <strong>Madde 4 – Cayma Hakkı ve İade</strong><br />
-                  Alıcı, teslimden itibaren 14 gün içerisinde cayma hakkına sahiptir. 
-                  Cayma halinde taksitli satış iptal edilir.
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  <strong>Madde 5 – Diğer Hükümler</strong><br />
-                  İşbu sözleşme, dijital ortamda onaylandığında yürürlüğe girer ve ıslak imza gerektirmez.
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  Alıcı, tüm şartları okuyup anladığını ve kabul ettiğini beyan eder.
+                <Typography variant="body2">
+                  Alıcı: {customer?.name} — TC: {customer?.tc_no} — Limit: {customer?.credit_limit}₺
                 </Typography>
               </Box>
               <FormControlLabel
@@ -251,34 +195,11 @@ const EmailVerification = () => {
               />
             </Paper>
 
-            {/* Elektronik Onay Metni */}
             <Paper elevation={1} sx={{ p: 2, mb: 3 }}>
               <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <Gavel color="primary" />
                 Elektronik Onay Metni
               </Typography>
-              <Box sx={{ maxHeight: 150, overflow: 'auto', mb: 2, p: 1, bgcolor: 'grey.50' }}>
-                <Typography variant="body2" paragraph>
-                  <strong>Değerli Müşterimiz,</strong>
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  Aşağıda yer alan "Onayla" butonuna tıklamanız halinde:
-                </Typography>
-                <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
-                  <li>Taksitli satış sözleşmesini dijital olarak kabul etmiş sayılacaksınız.</li>
-                  <li>KVKK aydınlatma metnini okuyup onayladığınızı beyan etmiş olacaksınız.</li>
-                  <li>Satın alım işleminiz sistem tarafından aktif hale gelecek ve taksitleriniz başlayacaktır.</li>
-                  <li>Sözleşme örnekleri e-posta adresinize gönderilecektir.</li>
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  Bu işlem 6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun 
-                  kapsamında geçerli bir onay olarak kayıt altına alınacaktır.
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                  Saygılarımızla,<br />
-                  3 KARE YAZILIM VE TASARIM AJANSI LİMİTED ŞİRKETİ
-                </Typography>
-              </Box>
               <FormControlLabel
                 control={
                   <Checkbox
@@ -305,7 +226,7 @@ const EmailVerification = () => {
                 disabled={loading || !agreements.kvkk || !agreements.contract || !agreements.electronic}
                 sx={{ minWidth: 200 }}
               >
-                {loading ? <CircularProgress size={24} /> : 'SÖZLEŞMELERI ONAYLA VE HESABI AKTİFLEŞTİR'}
+                {loading ? <CircularProgress size={24} /> : 'SÖZLEŞMELERİ ONAYLA VE HESABI AKTİFLEŞTİR'}
               </Button>
             </Box>
           </Box>
@@ -318,18 +239,7 @@ const EmailVerification = () => {
             <Typography variant="h4" gutterBottom color="success.main">
               Hesabınız Aktifleştirildi!
             </Typography>
-            <Typography variant="h6" paragraph>
-              Sayın <strong>{customer?.name}</strong>,
-            </Typography>
             <Typography paragraph>
-              Tüm sözleşmeler onaylandı ve hesabınız başarıyla aktifleştirildi.
-              Artık taksitli alışveriş yapabilir ve müşteri panelinize erişebilirsiniz.
-            </Typography>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              <strong>Kredi Limitiniz:</strong> {customer?.credit_limit}₺<br />
-              <strong>Hesap Durumu:</strong> Aktif
-            </Alert>
-            <Typography variant="body2" color="text.secondary">
               Giriş sayfasına yönlendiriliyorsunuz...
             </Typography>
           </Box>
@@ -340,16 +250,11 @@ const EmailVerification = () => {
     }
   };
 
-  if (loading && activeStep === 0) {
+  if (loading && activeStep === 0 && !error) {
     return (
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
-          <Box textAlign="center">
-            <CircularProgress size={60} />
-            <Typography variant="h6" sx={{ mt: 2 }}>
-              Email onayınız kontrol ediliyor...
-            </Typography>
-          </Box>
+          {renderStepContent()}
         </Paper>
       </Container>
     );
@@ -360,19 +265,38 @@ const EmailVerification = () => {
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Box textAlign="center">
-            <Error color="error" sx={{ fontSize: 80, mb: 2 }} />
+            <ErrorIcon color="error" sx={{ fontSize: 80, mb: 2 }} />
             <Typography variant="h5" gutterBottom color="error">
-              Email Onayı Başarısız
+              E-posta Onayı Başarısız
             </Typography>
-            <Alert severity="error" sx={{ mb: 3 }}>
+            <Alert severity="error" sx={{ mb: 3, textAlign: 'left' }}>
               {error}
             </Alert>
-            <Button
-              variant="contained"
-              onClick={() => navigate('/customer-register')}
-            >
-              Yeniden Kayıt Ol
-            </Button>
+
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Yeni doğrulama bağlantısı almak için e-posta adresinizi girin:
+            </Typography>
+            <TextField
+              fullWidth
+              label="E-posta"
+              type="email"
+              value={resendEmail}
+              onChange={(e) => setResendEmail(e.target.value)}
+              sx={{ mb: 2, maxWidth: 400 }}
+            />
+            {resendMessage && (
+              <Alert severity="info" sx={{ mb: 2, maxWidth: 400, mx: 'auto' }}>
+                {resendMessage}
+              </Alert>
+            )}
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button variant="outlined" onClick={handleResend} disabled={resendLoading}>
+                {resendLoading ? 'Gönderiliyor...' : 'Doğrulama E-postasını Tekrar Gönder'}
+              </Button>
+              <Button variant="contained" onClick={() => navigate('/customer-register')}>
+                Yeniden Kayıt Ol
+              </Button>
+            </Box>
           </Box>
         </Paper>
       </Container>
@@ -383,7 +307,7 @@ const EmailVerification = () => {
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
         <Typography variant="h4" gutterBottom textAlign="center" sx={{ mb: 4 }}>
-          Hesap Onayı - Marka World
+          Hesap Onayı — Marka World
         </Typography>
 
         <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
@@ -400,4 +324,4 @@ const EmailVerification = () => {
   );
 };
 
-export default EmailVerification; 
+export default EmailVerification;

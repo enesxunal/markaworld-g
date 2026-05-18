@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://markaworld.com.tr/api',
+  baseURL: process.env.REACT_APP_API_URL || 'https://markaworld.com.tr/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -67,6 +67,9 @@ export const customerAPI = {
   
   // Email onay
   verifyEmail: (token) => api.get(`/customers/verify-email/${token}`),
+
+  // Doğrulama e-postasını yeniden gönder
+  resendVerification: (email) => api.post('/customers/resend-verification', { email }),
   
   // Sözleşme onayı ve kayıt tamamlama
   completeRegistration: (token, agreements) => api.post(`/customers/complete-registration/${token}`, agreements),

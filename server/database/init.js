@@ -31,6 +31,13 @@ const initDatabase = () => {
   return new Promise((resolve, reject) => {
     console.log('✅ Veritabanı başarıyla başlatıldı!');
 
+    // Eski ISO formatındaki token sürelerini SQLite formatına çevir
+    db.run(`
+      UPDATE customers
+      SET verification_token_expires_at = replace(substr(verification_token_expires_at, 1, 19), 'T', ' ')
+      WHERE verification_token_expires_at LIKE '%T%'
+    `);
+
     // Tabloları oluştur
     db.serialize(() => {
       // Kullanıcılar tablosu (admin paneli için)
@@ -176,7 +183,13 @@ const initDatabase = () => {
         // Tüm tablolar oluşturulduktan sonra varsayılan verileri ekle
         insertDefaultData()
           .then(() => {
-            // Test müşterisi ekle
+            if (process.env.NODE_ENV === 'production') {
+              console.log('Production: test müşteri verisi eklenmedi');
+              resolve();
+              return;
+            }
+
+            // Geliştirme ortamı — test müşterisi
             const testPassword = bcrypt.hashSync('123456', 10);
 
             db.run(`
@@ -242,6 +255,24 @@ const insertDefaultData = () => {
   return new Promise((resolve, reject) => {
     // Email şablonlarını ekle
     const emailTemplates = [
+      {
+        name: 'customer_registration',
+        subject: "Marka World'e Hoş Geldiniz — E-posta Doğrulama",
+        html: `
+          <h2>Merhaba {{CUSTOMER_NAME}},</h2>
+          <p>Hesabınızı aktifleştirmek için <a href="{{VERIFICATION_LINK}}">buraya tıklayın</a>.</p>
+        `
+      },
+      {
+        name: 'sale_confirmation',
+        subject: 'Satışınız Onaylandı — Marka World',
+        html: `
+          <h2>Merhaba {{CUSTOMER_NAME}},</h2>
+          <p>Satış #{{SALE_ID}} onaylandı. Toplam: {{TOTAL_WITH_INTEREST}} ₺</p>
+          <table>{{INSTALLMENT_TABLE}}</table>
+          <p><a href="{{CUSTOMER_PORTAL_LINK}}">Müşteri paneline git</a></p>
+        `
+      },
       {
         name: 'welcome',
         subject: 'Marka World\'e Hoş Geldiniz',

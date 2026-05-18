@@ -4,10 +4,29 @@ const { db } = require('../database/init');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const emailService = require('../services/emailService');
+const { authenticateAdmin } = require('../middleware/auth');
+const { hoursFromNow } = require('../utils/datetime');
 const router = express.Router();
 
-// Tüm müşterileri listele
-router.get('/', (req, res) => {
+const sanitizeCustomer = (row) => {
+  if (!row) return null;
+  const { password, verification_token, ...safe } = row;
+  return safe;
+};
+
+const findByVerificationToken = (token) =>
+  new Promise((resolve, reject) => {
+    db.get(
+      `SELECT * FROM customers
+       WHERE verification_token = ?
+       AND (verification_token_expires_at IS NULL OR verification_token_expires_at > datetime('now'))`,
+      [token],
+      (err, row) => (err ? reject(err) : resolve(row))
+    );
+  });
+
+// Tüm müşterileri listele (admin)
+router.get('/', authenticateAdmin, (req, res) => {
   const { search, status } = req.query;
   let query = 'SELECT * FROM customers';
   let params = [];
@@ -35,12 +54,68 @@ router.get('/', (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'Müşteriler getirilemedi' });
     }
-    res.json(customers);
+    res.json(customers.map(sanitizeCustomer));
   });
 });
 
-// Müşteri detayı getir
-router.get('/:id', (req, res) => {
+// E-posta doğrulama linkini yeniden gönder (kayıt sonrası)
+router.post('/resend-verification', [
+  body('email').isEmail().withMessage('Geçerli email adresi girin')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { email } = req.body;
+
+  try {
+    const customer = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT * FROM customers WHERE email = ? AND status != 'active'`,
+        [email],
+        (err, row) => (err ? reject(err) : resolve(row))
+      );
+    });
+
+    if (!customer) {
+      return res.json({
+        success: true,
+        message: 'Kayıtlı e-posta adresinize doğrulama bağlantısı gönderildi.'
+      });
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = hoursFromNow(24);
+
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE customers SET verification_token = ?, verification_token_expires_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [verificationToken, expiresAt, customer.id],
+        (err) => (err ? reject(err) : resolve())
+      );
+    });
+
+    await emailService.sendCustomerRegistrationEmail(
+      { id: customer.id, name: customer.name, email: customer.email },
+      verificationToken
+    );
+
+    res.json({
+      success: true,
+      message: 'Doğrulama e-postası tekrar gönderildi. Gelen kutunuzu ve spam klasörünü kontrol edin.'
+    });
+  } catch (error) {
+    console.error('Doğrulama maili yeniden gönderme hatası:', error);
+    res.status(500).json({
+      success: false,
+      error: 'E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin veya bizimle iletişime geçin.'
+    });
+  }
+});
+
+// Müşteri detayı getir (admin)
+router.get('/:id', authenticateAdmin, (req, res) => {
   const customerId = req.params.id;
 
   // Önce müşteri bilgilerini al
@@ -73,7 +148,7 @@ router.get('/:id', (req, res) => {
       const totalRemainingDebt = sales.reduce((total, sale) => total + (sale.remaining_debt || 0), 0);
 
       res.json({
-        ...customer,
+        ...sanitizeCustomer(customer),
         current_debt: totalRemainingDebt,
         sales
       });
@@ -131,7 +206,7 @@ router.post('/register', [
     // Onay tokeni oluştur
     console.log('🎲 Onay tokeni oluşturuluyor...');
     const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 saat
+    const verificationTokenExpiresAt = hoursFromNow(24);
     console.log('✅ Onay tokeni oluşturuldu:', {
       token: verificationToken,
       expiresAt: verificationTokenExpiresAt
@@ -154,7 +229,7 @@ router.post('/register', [
           name, tc_no, phone, email, password, birth_date, address, 
           verification_token, verification_token_expires_at, status, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-        [name, tc_no, phone, email, hashedPassword, birth_date, address, verificationToken, verificationTokenExpiresAt.toISOString(), 'pending'],
+        [name, tc_no, phone, email, hashedPassword, birth_date, address, verificationToken, verificationTokenExpiresAt, 'pending'],
         function(err) {
           if (err) reject(err);
           else resolve(this.lastID);
@@ -165,32 +240,26 @@ router.post('/register', [
     const customerId = result;
     console.log('✅ Müşteri kaydedildi, ID:', customerId);
 
-    // Onay emaili gönder
+    let emailSent = false;
+    let emailErrorMessage = null;
     try {
-      console.log('📧 Email gönderiliyor...');
-      console.log('📧 Email bilgileri:', {
-        id: customerId,
-        name,
-        email,
-        verificationToken
-      });
-      
-      const emailResult = await emailService.sendCustomerRegistrationEmail(
+      await emailService.sendCustomerRegistrationEmail(
         { id: customerId, name, email },
         verificationToken
       );
-      
-      console.log('✅ Email başarıyla gönderildi:', emailResult);
+      emailSent = true;
     } catch (emailError) {
-      console.error('❌ Email gönderme hatası:', emailError);
-      console.error('❌ Hata detayı:', emailError.stack);
-      // Email hatası olsa bile kayıt tamamlanmış sayılır
+      console.error('❌ Email gönderme hatası:', emailError.message);
+      emailErrorMessage = emailError.message;
     }
 
-    console.log('🎉 Kayıt işlemi tamamlandı!');
     res.status(201).json({
       success: true,
-      message: 'Kayıt başarılı! Email adresinize gönderilen onay linkine tıklayarak hesabınızı aktifleştirin.',
+      emailSent,
+      message: emailSent
+        ? 'Kayıt başarılı! E-posta adresinize gönderilen onay linkine tıklayın.'
+        : 'Kayıt oluşturuldu ancak doğrulama e-postası gönderilemedi. "Tekrar gönder" ile yeniden deneyebilirsiniz.',
+      emailError: emailErrorMessage,
       customerId
     });
 
@@ -201,56 +270,50 @@ router.post('/register', [
   }
 });
 
-// Email onay
+// E-posta onayı (herkese açık — token ile)
 router.get('/verify-email/:token', async (req, res) => {
   const verificationToken = req.params.token;
 
   try {
-    // Token ile müşteriyi bul
-    const customer = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT * FROM customers WHERE verification_token = ? AND email_verified = 0 AND verification_token_expires_at > datetime("now")',
-        [verificationToken],
-        (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        }
-      );
-    });
+    const customer = await findByVerificationToken(verificationToken);
 
     if (!customer) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: 'Geçersiz veya süresi dolmuş onay linki' 
+        error: 'Geçersiz veya süresi dolmuş onay linki. Yeni doğrulama e-postası isteyebilirsiniz.'
       });
     }
 
-    // Email'i onaylandı olarak işaretle (ama henüz aktifleştirme)
-    await new Promise((resolve, reject) => {
-      db.run(
-        'UPDATE customers SET email_verified = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [customer.id],
-        function(err) {
-          if (err) reject(err);
-          else resolve();
-        }
-      );
-    });
+    if (customer.status === 'active') {
+      return res.json({
+        success: true,
+        alreadyActive: true,
+        message: 'Hesabınız zaten aktif. Giriş yapabilirsiniz.',
+        customer: sanitizeCustomer(customer)
+      });
+    }
 
-    // Müşteri bilgilerini döndür (şifre hariç)
-    const { password, verification_token, ...customerData } = customer;
-    
+    if (!customer.email_verified) {
+      await new Promise((resolve, reject) => {
+        db.run(
+          'UPDATE customers SET email_verified = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [customer.id],
+          (err) => (err ? reject(err) : resolve())
+        );
+      });
+      customer.email_verified = 1;
+    }
+
     res.json({
       success: true,
-      message: 'Email başarıyla onaylandı',
-      customer: customerData
+      message: 'E-posta adresiniz onaylandı. Sözleşmeleri onaylayarak hesabınızı tamamlayın.',
+      customer: sanitizeCustomer(customer)
     });
-
   } catch (error) {
     console.error('Email onay hatası:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: 'Onay sırasında bir hata oluştu' 
+      error: 'Onay sırasında bir hata oluştu'
     });
   }
 });
@@ -326,8 +389,8 @@ router.post('/login', [
   }
 });
 
-// Müşteri güncelle
-router.put('/:id', [
+// Müşteri güncelle (admin)
+router.put('/:id', authenticateAdmin, [
   body('name').notEmpty().withMessage('Ad Soyad gerekli'),
   body('tc_no').isLength({ min: 11, max: 11 }).withMessage('TC Kimlik No 11 haneli olmalı'),
   body('phone').notEmpty().withMessage('Telefon gerekli'),
@@ -386,8 +449,8 @@ router.put('/:id', [
   });
 });
 
-// Müşteri sil
-router.delete('/:id', (req, res) => {
+// Müşteri sil (admin)
+router.delete('/:id', authenticateAdmin, (req, res) => {
   const customerId = req.params.id;
 
   // Önce müşterinin aktif satışları var mı kontrol et
@@ -420,8 +483,8 @@ router.delete('/:id', (req, res) => {
   );
 });
 
-// Müşteri kredi limitini güncelle (manuel)
-router.post('/:id/increase-limit', [
+// Müşteri kredi limitini güncelle (admin)
+router.post('/:id/increase-limit', authenticateAdmin, [
   body('new_limit').isFloat({ min: 0 }).withMessage('Yeni limit pozitif olmalı')
 ], (req, res) => {
   const errors = validationResult(req);
@@ -461,7 +524,7 @@ router.post('/:id/increase-limit', [
 });
 
 // Müşterinin satışlarını getir
-router.get('/:id/sales', (req, res) => {
+router.get('/:id/sales', authenticateAdmin, (req, res) => {
   const customerId = req.params.id;
 
   const query = `
@@ -482,7 +545,7 @@ router.get('/:id/sales', (req, res) => {
 });
 
 // Müşterinin taksitlerini getir
-router.get('/:id/installments', (req, res) => {
+router.get('/:id/installments', authenticateAdmin, (req, res) => {
   const customerId = req.params.id;
 
   const query = `
@@ -502,7 +565,7 @@ router.get('/:id/installments', (req, res) => {
 });
 
 // Admin - Yeni müşteri ekle (direkt aktif)
-router.post('/', [
+router.post('/', authenticateAdmin, [
   body('name').notEmpty().withMessage('Ad Soyad gerekli'),
   body('tc_no').isLength({ min: 11, max: 11 }).withMessage('TC Kimlik No 11 haneli olmalı'),
   body('phone').notEmpty().withMessage('Telefon gerekli'),
@@ -557,8 +620,8 @@ router.post('/', [
   });
 });
 
-// Test için müşteriyi aktifleştir
-router.post('/activate/:id', (req, res) => {
+// Müşteriyi manuel aktifleştir (admin)
+router.post('/activate/:id', authenticateAdmin, (req, res) => {
   const customerId = req.params.id;
   
   db.run(
@@ -578,28 +641,39 @@ router.post('/activate/:id', (req, res) => {
   );
 });
 
-// Sözleşme onayı ve kayıt tamamlama
+// Sözleşme onayı ve kayıt tamamlama (token ile)
 router.post('/complete-registration/:token', async (req, res) => {
   const { token } = req.params;
   const { kvkk, contract, electronic } = req.body;
 
-  try {
-    // Token ile müşteriyi bul
-    const customer = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT * FROM customers WHERE verification_token = ? AND email_verified = 1 AND verification_token_expires_at > datetime("now")',
-        [token],
-        (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        }
-      );
+  if (!kvkk || !contract || !electronic) {
+    return res.status(400).json({
+      success: false,
+      error: 'Tüm sözleşmeleri onaylamanız gerekmektedir'
     });
+  }
+
+  try {
+    const customer = await findByVerificationToken(token);
 
     if (!customer) {
       return res.status(400).json({
         success: false,
         error: 'Geçersiz veya süresi dolmuş onay linki'
+      });
+    }
+
+    if (!customer.email_verified) {
+      return res.status(400).json({
+        success: false,
+        error: 'Önce e-posta adresinizi doğrulamanız gerekiyor'
+      });
+    }
+
+    if (customer.status === 'active') {
+      return res.json({
+        success: true,
+        message: 'Hesabınız zaten aktif'
       });
     }
 

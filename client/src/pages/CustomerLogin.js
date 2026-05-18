@@ -14,7 +14,7 @@ import {
   useMediaQuery
 } from '@mui/material';
 import { Visibility, VisibilityOff, Email, Lock } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { customerAPI } from '../services/api';
 
 const CustomerLogin = () => {
@@ -26,7 +26,9 @@ const CustomerLogin = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
+  const successMessage = location.state?.message;
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleChange = (e) => {
@@ -124,6 +126,12 @@ const CustomerLogin = () => {
             Email ve şifreniz ile giriş yapın
           </Typography>
         </Box>
+
+        {successMessage && (
+          <Alert severity="success" sx={{ mb: 3, fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
+            {successMessage}
+          </Alert>
+        )}
 
         {error && (
           <Alert 
