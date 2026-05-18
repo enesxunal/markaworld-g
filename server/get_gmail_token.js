@@ -4,11 +4,11 @@ const fs = require('fs');
 const path = require('path');
 
 // .env dosyasından client_id ve client_secret'i al
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const CLIENT_ID = process.env.GMAIL_CLIENT_ID;
 const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
-const REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob';
+const REDIRECT_URI = process.env.GMAIL_REDIRECT_URI || 'urn:ietf:wg:oauth:2.0:oob';
 
 const oAuth2Client = new google.auth.OAuth2(
   CLIENT_ID,

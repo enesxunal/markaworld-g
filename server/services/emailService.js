@@ -44,12 +44,16 @@ function hasSmtpConfig() {
   );
 }
 
+function getGmailRedirectUri() {
+  return process.env.GMAIL_REDIRECT_URI || 'urn:ietf:wg:oauth:2.0:oob';
+}
+
 async function createGmailTransporter() {
   const { google } = require('googleapis');
   const oAuth2Client = new google.auth.OAuth2(
     process.env.GMAIL_CLIENT_ID,
     process.env.GMAIL_CLIENT_SECRET,
-    'https://developers.google.com/oauthplayground'
+    getGmailRedirectUri()
   );
   oAuth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
 
