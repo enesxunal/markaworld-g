@@ -35,6 +35,7 @@ function Dashboard() {
   const [recentSales, setRecentSales] = useState([]);
   const [upcomingPayments, setUpcomingPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,6 +45,7 @@ function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       
       // Müşteri sayısı
       const customersResponse = await customerAPI.getAll();
@@ -77,6 +79,12 @@ function Dashboard() {
       
     } catch (error) {
       console.error('Dashboard verileri yüklenemedi:', error);
+      const msg = error.response?.data?.error || error.message;
+      setLoadError(
+        msg.includes('401') || msg.includes('403') || error.response?.status === 401
+          ? 'Oturum süresi doldu veya yetkiniz yok. Çıkış yapıp admin olarak tekrar giriş yapın.'
+          : `Veriler yüklenemedi: ${msg}`
+      );
     } finally {
       setLoading(false);
     }
@@ -135,6 +143,12 @@ function Dashboard() {
       <Typography variant="h4" gutterBottom>
         Ana Sayfa
       </Typography>
+
+      {loadError && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          {loadError}
+        </Alert>
+      )}
       
       <Alert severity="info" sx={{ mb: 3 }}>
         Hoş geldiniz! Müşteri ödeme takip sisteminiz aktif olarak çalışıyor.

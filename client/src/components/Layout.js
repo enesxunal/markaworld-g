@@ -12,6 +12,7 @@ import {
   Button,
   Stack
 } from '@mui/material';
+import { clearAdminSession, clearCustomerSession } from '../utils/apiAuth';
 import {
   ExitToApp,
   Person,
@@ -30,11 +31,10 @@ const Layout = ({ isAdmin }) => {
 
   const handleLogout = () => {
     if (isAdmin) {
-      localStorage.removeItem('adminToken');
-      localStorage.removeItem('adminUser');
+      clearAdminSession();
       navigate('/admin/login');
     } else {
-      localStorage.removeItem('customer');
+      clearCustomerSession();
       navigate('/customer-login');
     }
   };

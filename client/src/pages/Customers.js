@@ -54,6 +54,7 @@ function Customers() {
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [openDialog, setOpenDialog] = useState(false);
@@ -95,10 +96,17 @@ function Customers() {
   const loadCustomers = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const response = await customerAPI.getAll();
       setCustomers(response.data);
     } catch (error) {
       console.error('Müşteriler yüklenemedi:', error);
+      const msg = error.response?.data?.error || error.message;
+      setLoadError(
+        error.response?.status === 401 || error.response?.status === 403
+          ? 'Oturum süresi doldu. Çıkış yapıp admin olarak tekrar giriş yapın.'
+          : `Müşteriler yüklenemedi: ${msg}`
+      );
     } finally {
       setLoading(false);
     }
@@ -331,6 +339,10 @@ function Customers() {
           Yeni Müşteri
         </Button>
       </Stack>
+
+      {loadError && (
+        <Alert severity="warning" sx={{ mb: 2 }}>{loadError}</Alert>
+      )}
 
       {/* Arama ve Filtreleme */}
       <Paper sx={{ p: isMobile ? 1.5 : 2, mb: 2 }}>

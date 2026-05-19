@@ -1,4 +1,10 @@
 import axios from 'axios';
+import {
+  isAdminApi,
+  isCustomerMeApi,
+  clearAdminSession,
+  clearCustomerSession
+} from '../utils/apiAuth';
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'https://markaworld.com.tr/api',
@@ -8,42 +14,55 @@ const api = axios.create({
   }
 });
 
-// Request interceptor
+// Request interceptor — admin ve müşteri token'ları karışmasın
 api.interceptors.request.use(
   (config) => {
     const url = config.url || '';
-    const isCustomerMe = url.includes('/customers/me');
+    delete config.headers.Authorization;
 
-    if (isCustomerMe) {
+    if (isCustomerMeApi(url)) {
       const customerToken = localStorage.getItem('customerToken');
       if (customerToken) {
         config.headers.Authorization = `Bearer ${customerToken}`;
-        return config;
       }
-    }
-
-    const adminToken = localStorage.getItem('adminToken');
-    if (adminToken) {
-      config.headers.Authorization = `Bearer ${adminToken}`;
       return config;
     }
 
-    const customerToken = localStorage.getItem('customerToken');
-    if (customerToken) {
-      config.headers.Authorization = `Bearer ${customerToken}`;
+    if (isAdminApi(url)) {
+      const adminToken = localStorage.getItem('adminToken');
+      if (adminToken) {
+        config.headers.Authorization = `Bearer ${adminToken}`;
+      }
+      return config;
     }
+
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor - sadece hataları logla
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error.response?.data?.message || error.message);
+    const status = error.response?.status;
+    const url = error.config?.url || '';
+    const msg = error.response?.data?.error || error.message;
+    console.error('API Error:', msg);
+
+    if (status === 401 || status === 403) {
+      if (isAdminApi(url)) {
+        clearAdminSession();
+        if (!window.location.pathname.startsWith('/admin/login')) {
+          window.location.assign('/admin/login?session=expired');
+        }
+      } else if (isCustomerMeApi(url)) {
+        clearCustomerSession();
+        if (!window.location.pathname.startsWith('/customer-login')) {
+          window.location.assign('/customer-login?session=expired');
+        }
+      }
+    }
+
     return Promise.reject(error);
   }
 );

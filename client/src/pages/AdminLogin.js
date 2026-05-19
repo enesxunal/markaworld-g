@@ -18,13 +18,16 @@ import {
   AdminPanelSettings,
   Login
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { adminAPI } from '../services/api';
+import { clearCustomerSession } from '../utils/apiAuth';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const sessionExpired = searchParams.get('session') === 'expired';
   
   const [formData, setFormData] = useState({
     username: '',
@@ -51,7 +54,7 @@ const AdminLogin = () => {
       const response = await adminAPI.login(formData);
       
       if (response.data.success) {
-        // Admin token'ını localStorage'a kaydet
+        clearCustomerSession();
         localStorage.setItem('adminToken', response.data.token);
         localStorage.setItem('adminUser', JSON.stringify(response.data.admin));
         
@@ -164,6 +167,12 @@ const AdminLogin = () => {
               }
             }}
           />
+
+          {sessionExpired && (
+            <Alert severity="warning" sx={{ mb: 2, fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
+              Oturum süresi doldu. Lütfen tekrar giriş yapın.
+            </Alert>
+          )}
 
           {error && (
             <Alert 

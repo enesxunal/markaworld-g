@@ -16,6 +16,7 @@ import {
 import { Visibility, VisibilityOff, Email, Lock } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { customerAPI } from '../services/api';
+import { clearAdminSession } from '../utils/apiAuth';
 
 const CustomerLogin = () => {
   const [formData, setFormData] = useState({
@@ -47,6 +48,7 @@ const CustomerLogin = () => {
       const response = await customerAPI.login(formData);
       
       if (response.data.success) {
+        clearAdminSession();
         localStorage.setItem('customer', JSON.stringify(response.data.customer));
         if (response.data.token) {
           localStorage.setItem('customerToken', response.data.token);
