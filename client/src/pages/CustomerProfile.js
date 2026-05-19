@@ -17,15 +17,9 @@ import {
   Button,
   Alert,
   Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  useTheme,
   useMediaQuery,
   IconButton,
   Stack,
-  Link,
   Avatar,
   Snackbar,
   LinearProgress,
@@ -46,23 +40,35 @@ import {
   AccountBalance,
   Schedule,
   ShoppingBag,
-  WhatsApp
+  WhatsApp,
+  CreditCard,
+  TrendingDown,
+  AccountBalanceWallet,
+  Event
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
 import { customerAPI } from '../services/api';
 
 const IBAN = 'TR48 0011 1000 0000 0137 1441 61';
 const COMPANY_NAME = '3 Kare Yazılım ve Tasarım Ajansı Limited Şirketi';
 const WHATSAPP = '905368324660';
 
-// Marka World — siyah / beyaz
-const BRAND = {
-  black: '#000000',
+const C = {
+  black: '#111111',
   white: '#ffffff',
-  bg: '#fafafa',
-  grey: '#f0f0f0',
-  border: '#e0e0e0',
-  muted: '#6b6b6b'
+  pageBg: '#f3f4f6',
+  card: '#ffffff',
+  border: '#e5e7eb',
+  muted: '#6b7280',
+  headerBg: '#0a0a0a',
+  green: '#16a34a',
+  greenBg: '#dcfce7',
+  amber: '#d97706',
+  amberBg: '#fef3c7',
+  red: '#dc2626',
+  redBg: '#fee2e2',
+  whatsapp: '#25D366'
 };
 
 const formatMoney = (value) =>
@@ -70,6 +76,72 @@ const formatMoney = (value) =>
 
 const formatDate = (date) =>
   date ? new Date(date).toLocaleDateString('tr-TR') : '-';
+
+function IconBadge({ children, bg, color }) {
+  return (
+    <Box
+      sx={{
+        width: 44,
+        height: 44,
+        borderRadius: 2,
+        bgcolor: bg,
+        color: color,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+
+function InfoRow({ icon, label, value, bg, color }) {
+  return (
+    <Stack direction="row" spacing={1.5} alignItems="flex-start" sx={{ mb: 2 }}>
+      <IconBadge bg={bg} color={color}>{icon}</IconBadge>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="caption" sx={{ color: C.muted, display: 'block' }}>
+          {label}
+        </Typography>
+        <Typography variant="body2" fontWeight={600} sx={{ color: C.black, wordBreak: 'break-word' }}>
+          {value || '-'}
+        </Typography>
+      </Box>
+    </Stack>
+  );
+}
+
+function StatCard({ title, value, icon, bg, color, loading }) {
+  return (
+    <Card
+      elevation={0}
+      sx={{
+        height: '100%',
+        borderRadius: 2.5,
+        border: `1px solid ${C.border}`,
+        bgcolor: C.card,
+        transition: 'box-shadow 0.2s',
+        '&:hover': { boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }
+      }}
+    >
+      <CardContent sx={{ py: 2.5 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <IconBadge bg={bg} color={color}>{icon}</IconBadge>
+          <Box>
+            <Typography variant="caption" sx={{ color: C.muted }}>
+              {title}
+            </Typography>
+            <Typography variant="h6" fontWeight={700} sx={{ color: C.black, lineHeight: 1.2 }}>
+              {loading ? '...' : value}
+            </Typography>
+          </Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
 
 const getInstallmentMeta = (installment) => {
   const status = installment.display_status || installment.status;
@@ -80,21 +152,21 @@ const getInstallmentMeta = (installment) => {
   if (status === 'paid') {
     return {
       label: 'Ödendi',
-      icon: <CheckCircle fontSize="small" />,
-      chipSx: { borderColor: BRAND.black, color: BRAND.black, bgcolor: BRAND.white }
+      icon: <CheckCircle sx={{ fontSize: 16 }} />,
+      sx: { bgcolor: C.greenBg, color: C.green, border: 'none', fontWeight: 600 }
     };
   }
   if (status === 'overdue' || (status === 'unpaid' && due < today)) {
     return {
       label: 'Gecikmiş',
-      icon: <ErrorIcon fontSize="small" />,
-      chipSx: { borderColor: BRAND.black, color: BRAND.white, bgcolor: BRAND.black }
+      icon: <ErrorIcon sx={{ fontSize: 16 }} />,
+      sx: { bgcolor: C.redBg, color: C.red, border: 'none', fontWeight: 600 }
     };
   }
   return {
     label: 'Bekliyor',
-    icon: <Warning fontSize="small" />,
-    chipSx: { borderColor: BRAND.muted, color: BRAND.muted, bgcolor: BRAND.white }
+    icon: <Warning sx={{ fontSize: 16 }} />,
+    sx: { bgcolor: C.amberBg, color: C.amber, border: 'none', fontWeight: 600 }
   };
 };
 
@@ -164,10 +236,7 @@ const CustomerProfile = () => {
     const paid = installments.filter((i) => (i.display_status || i.status) === 'paid');
     const pending = installments.filter((i) => (i.display_status || i.status) !== 'paid');
     const overdue = installments.filter((i) => (i.display_status || i.status) === 'overdue');
-    const nextDue = pending
-      .map((i) => new Date(i.due_date))
-      .sort((a, b) => a - b)[0];
-
+    const nextDue = pending.map((i) => new Date(i.due_date)).sort((a, b) => a - b)[0];
     const creditLimit = parseFloat(customer?.credit_limit) || 0;
     const currentDebt = parseFloat(customer?.current_debt) || 0;
 
@@ -195,12 +264,12 @@ const CustomerProfile = () => {
     setSnackbarOpen(true);
   };
 
-  if (!customer && !loading) {
-    return null;
-  }
+  if (!customer && !loading) return null;
+
+  const tableHeadSx = { bgcolor: '#f9fafb', fontWeight: 700, color: C.black };
 
   return (
-    <Box sx={{ bgcolor: BRAND.bg, minHeight: '100vh', pb: 4 }}>
+    <Box sx={{ bgcolor: C.pageBg, minHeight: '100vh', pb: 5 }}>
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={2000}
@@ -209,46 +278,23 @@ const CustomerProfile = () => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
 
-      {/* Üst banner */}
-      <Box
-        sx={{
-          bgcolor: BRAND.black,
-          color: BRAND.white,
-          py: 3,
-          px: 2,
-          borderBottom: `3px solid ${BRAND.white}`
-        }}
-      >
+      {/* Üst bar — açık yazı garantili */}
+      <Box sx={{ bgcolor: C.headerBg, color: C.white, py: 3, px: 2 }}>
         <Container maxWidth="lg">
           <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
             <Stack direction="row" alignItems="center" spacing={2}>
-              <Box
-                component="img"
-                src="/logo.png"
-                alt="Marka World"
-                sx={{ height: 40, width: 'auto', display: { xs: 'none', sm: 'block' } }}
-              />
-              <Avatar
-                sx={{
-                  width: 56,
-                  height: 56,
-                  bgcolor: BRAND.white,
-                  color: BRAND.black,
-                  fontSize: '1.4rem',
-                  fontWeight: 700,
-                  border: `2px solid ${BRAND.white}`
-                }}
-              >
+              <Box component="img" src="/logo.png" alt="Marka World" sx={{ height: 38, display: { xs: 'none', sm: 'block' } }} />
+              <Avatar sx={{ width: 52, height: 52, bgcolor: C.white, color: C.black, fontWeight: 800 }}>
                 {customer?.name?.charAt(0)?.toUpperCase() || '?'}
               </Avatar>
               <Box>
-                <Typography variant="overline" sx={{ opacity: 0.85 }}>
-                  Marka World Müşteri Paneli
+                <Typography sx={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.7rem', letterSpacing: 1, textTransform: 'uppercase' }}>
+                  Müşteri Paneli
                 </Typography>
-                <Typography variant="h5" fontWeight={700}>
-                  {loading ? <Skeleton width={160} sx={{ bgcolor: 'rgba(255,255,255,0.2)' }} /> : customer?.name}
+                <Typography sx={{ color: C.white, fontSize: '1.35rem', fontWeight: 700, lineHeight: 1.2 }}>
+                  {loading ? <Skeleton width={140} sx={{ bgcolor: 'rgba(255,255,255,0.15)' }} /> : customer?.name}
                 </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.875rem' }}>
                   {customer?.email}
                 </Typography>
               </Box>
@@ -258,10 +304,9 @@ const CustomerProfile = () => {
               onClick={handleLogout}
               startIcon={<ExitToApp />}
               sx={{
-                color: BRAND.white,
-                borderColor: BRAND.white,
-                fontWeight: 600,
-                '&:hover': { borderColor: BRAND.grey, bgcolor: 'rgba(255,255,255,0.08)' }
+                color: C.white,
+                borderColor: 'rgba(255,255,255,0.5)',
+                '&:hover': { borderColor: C.white, bgcolor: 'rgba(255,255,255,0.1)' }
               }}
             >
               Çıkış
@@ -270,177 +315,92 @@ const CustomerProfile = () => {
         </Container>
       </Box>
 
-      <Container maxWidth="lg" sx={{ mt: -2 }}>
+      <Container maxWidth="lg" sx={{ mt: 3 }}>
         {loading && (
-          <LinearProgress
-            sx={{
-              mb: 2,
-              borderRadius: 1,
-              bgcolor: BRAND.grey,
-              '& .MuiLinearProgress-bar': { bgcolor: BRAND.black }
-            }}
-          />
+          <LinearProgress sx={{ mb: 2, borderRadius: 1, bgcolor: C.border, '& .MuiLinearProgress-bar': { bgcolor: C.black } }} />
         )}
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }} action={
-            <Button color="inherit" size="small" onClick={loadCustomerData}>Yenile</Button>
-          }>
+          <Alert severity="error" sx={{ mb: 2 }} action={<Button color="inherit" size="small" onClick={loadCustomerData}>Yenile</Button>}>
             {error}
           </Alert>
         )}
 
-        {/* Özet kartlar */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          {[
-            { title: 'Kredi Limiti', value: formatMoney(stats.creditLimit) },
-            { title: 'Mevcut Borç', value: formatMoney(stats.currentDebt) },
-            { title: 'Kullanılabilir', value: formatMoney(stats.available) },
-            {
-              title: 'Sonraki Taksit',
-              value: stats.nextDue ? formatDate(stats.nextDue) : 'Yok'
-            }
-          ].map((item) => (
-            <Grid item xs={6} md={3} key={item.title}>
-              <Card
-                elevation={0}
-                sx={{
-                  borderRadius: 2,
-                  border: `1px solid ${BRAND.border}`,
-                  bgcolor: BRAND.white
-                }}
-              >
-                <CardContent sx={{ py: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {item.title}
-                  </Typography>
-                  <Typography variant="h6" fontWeight={700} sx={{ color: BRAND.black, mt: 0.5 }}>
-                    {loading ? '...' : item.value}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
+          <Grid item xs={6} md={3}>
+            <StatCard title="Kredi Limiti" value={formatMoney(stats.creditLimit)} icon={<CreditCard />} bg="#f3f4f6" color={C.black} loading={loading} />
+          </Grid>
+          <Grid item xs={6} md={3}>
+            <StatCard title="Mevcut Borç" value={formatMoney(stats.currentDebt)} icon={<TrendingDown />} bg={C.redBg} color={C.red} loading={loading} />
+          </Grid>
+          <Grid item xs={6} md={3}>
+            <StatCard title="Kullanılabilir" value={formatMoney(stats.available)} icon={<AccountBalanceWallet />} bg={C.greenBg} color={C.green} loading={loading} />
+          </Grid>
+          <Grid item xs={6} md={3}>
+            <StatCard title="Sonraki Taksit" value={stats.nextDue ? formatDate(stats.nextDue) : 'Yok'} icon={<Event />} bg={C.amberBg} color={C.amber} loading={loading} />
+          </Grid>
         </Grid>
 
-        {/* Limit kullanımı */}
-        <Card
-          elevation={0}
-          sx={{ mb: 3, borderRadius: 2, p: 2, border: `1px solid ${BRAND.border}`, bgcolor: BRAND.white }}
-        >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Limit kullanımı
-            </Typography>
-            <Typography variant="body2" fontWeight={600}>
-              %{stats.usagePercent.toFixed(0)}
-            </Typography>
+        <Card elevation={0} sx={{ mb: 3, borderRadius: 2.5, border: `1px solid ${C.border}`, bgcolor: C.card, p: 2.5 }}>
+          <Stack direction="row" justifyContent="space-between" mb={1}>
+            <Typography fontWeight={600} sx={{ color: C.black }}>Limit kullanımı</Typography>
+            <Typography fontWeight={700} sx={{ color: C.black }}>%{stats.usagePercent.toFixed(0)}</Typography>
           </Stack>
           <LinearProgress
             variant="determinate"
             value={stats.usagePercent}
             sx={{
-              height: 10,
-              borderRadius: 5,
-              bgcolor: BRAND.grey,
+              height: 8,
+              borderRadius: 4,
+              bgcolor: '#e5e7eb',
               '& .MuiLinearProgress-bar': {
-                borderRadius: 5,
-                bgcolor: stats.usagePercent > 80 ? BRAND.black : '#333333'
+                borderRadius: 4,
+                bgcolor: stats.usagePercent > 80 ? C.red : C.black
               }
             }}
           />
-          <Stack direction="row" spacing={2} mt={2} flexWrap="wrap">
-            <Chip
-              size="small"
-              icon={<CheckCircle />}
-              label={`${stats.paidCount} ödendi`}
-              variant="outlined"
-              sx={{ borderColor: BRAND.black, color: BRAND.black }}
-            />
-            <Chip
-              size="small"
-              icon={<Schedule />}
-              label={`${stats.pendingCount} bekliyor`}
-              variant="outlined"
-              sx={{ borderColor: BRAND.muted, color: BRAND.muted }}
-            />
+          <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" useFlexGap>
+            <Chip size="small" icon={<CheckCircle />} label={`${stats.paidCount} ödendi`} sx={{ bgcolor: C.greenBg, color: C.green, fontWeight: 600 }} />
+            <Chip size="small" icon={<Schedule />} label={`${stats.pendingCount} bekliyor`} sx={{ bgcolor: C.amberBg, color: C.amber, fontWeight: 600 }} />
             {stats.overdueCount > 0 && (
-              <Chip
-                size="small"
-                icon={<ErrorIcon />}
-                label={`${stats.overdueCount} gecikmiş`}
-                sx={{ bgcolor: BRAND.black, color: BRAND.white }}
-              />
+              <Chip size="small" icon={<ErrorIcon />} label={`${stats.overdueCount} gecikmiş`} sx={{ bgcolor: C.redBg, color: C.red, fontWeight: 600 }} />
             )}
           </Stack>
         </Card>
 
         <Grid container spacing={3}>
-          {/* Sol: iletişim */}
           <Grid item xs={12} md={4}>
-            <Card
-              elevation={0}
-              sx={{ borderRadius: 2, height: '100%', border: `1px solid ${BRAND.border}`, bgcolor: BRAND.white }}
-            >
-              <CardContent>
-                <Typography variant="h6" gutterBottom fontWeight={600}>
+            <Card elevation={0} sx={{ borderRadius: 2.5, border: `1px solid ${C.border}`, bgcolor: C.card, mb: 2 }}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Typography variant="h6" fontWeight={700} sx={{ color: C.black, mb: 2 }}>
                   Hesap Bilgileri
                 </Typography>
-                <Divider sx={{ mb: 2 }} />
-                <List dense disablePadding>
-                  <ListItem disablePadding sx={{ mb: 1.5 }}>
-                    <ListItemIcon sx={{ minWidth: 36, color: BRAND.black }}><Phone fontSize="small" /></ListItemIcon>
-                    <ListItemText primary="Telefon" secondary={customer?.phone || '-'} />
-                  </ListItem>
-                  <ListItem disablePadding sx={{ mb: 1.5 }}>
-                    <ListItemIcon sx={{ minWidth: 36, color: BRAND.black }}><Email fontSize="small" /></ListItemIcon>
-                    <ListItemText primary="E-posta" secondary={customer?.email || '-'} />
-                  </ListItem>
-                  <ListItem disablePadding sx={{ mb: 1.5 }}>
-                    <ListItemIcon sx={{ minWidth: 36, color: BRAND.black }}><Badge fontSize="small" /></ListItemIcon>
-                    <ListItemText primary="T.C. Kimlik No" secondary={customer?.tc_no || '-'} />
-                  </ListItem>
-                  <ListItem disablePadding>
-                    <ListItemIcon sx={{ minWidth: 36, color: BRAND.black }}><Home fontSize="small" /></ListItemIcon>
-                    <ListItemText primary="Adres" secondary={customer?.address || 'Belirtilmemiş'} />
-                  </ListItem>
-                </List>
+                <InfoRow icon={<Phone fontSize="small" />} label="Telefon" value={customer?.phone} bg="#eff6ff" color="#2563eb" />
+                <InfoRow icon={<Email fontSize="small" />} label="E-posta" value={customer?.email} bg="#f3e8ff" color="#7c3aed" />
+                <InfoRow icon={<Badge fontSize="small" />} label="T.C. Kimlik No" value={customer?.tc_no} bg="#f3f4f6" color={C.black} />
+                <InfoRow icon={<Home fontSize="small" />} label="Adres" value={customer?.address || 'Belirtilmemiş'} bg="#fff7ed" color={C.amber} />
               </CardContent>
             </Card>
 
-            {/* Ödeme bilgileri */}
-            <Card
-              elevation={0}
-              sx={{ borderRadius: 2, mt: 2, border: `1px solid ${BRAND.border}`, bgcolor: BRAND.white }}
-            >
-              <CardContent>
+            <Card elevation={0} sx={{ borderRadius: 2.5, border: `1px solid ${C.border}`, bgcolor: C.card }}>
+              <CardContent sx={{ p: 2.5 }}>
                 <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                  <AccountBalance sx={{ color: BRAND.black }} />
-                  <Typography variant="h6" fontWeight={600}>Ödeme Bilgileri</Typography>
+                  <IconBadge bg="#f3f4f6" color={C.black}><AccountBalance fontSize="small" /></IconBadge>
+                  <Typography variant="h6" fontWeight={700} sx={{ color: C.black }}>Ödeme Bilgileri</Typography>
                 </Stack>
-                <Typography variant="caption" color="text.secondary">Alıcı</Typography>
-                <Stack direction="row" alignItems="center" mb={2}>
-                  <Typography variant="body2" fontWeight={500} sx={{ flex: 1 }}>
+                <Typography variant="caption" sx={{ color: C.muted }}>Alıcı</Typography>
+                <Stack direction="row" alignItems="flex-start" mb={2}>
+                  <Typography variant="body2" fontWeight={600} sx={{ color: C.black, flex: 1, pr: 1 }}>
                     {COMPANY_NAME}
                   </Typography>
                   <IconButton size="small" onClick={() => handleCopy(COMPANY_NAME, 'Firma adı kopyalandı')}>
                     <ContentCopy fontSize="small" />
                   </IconButton>
                 </Stack>
-                <Typography variant="caption" color="text.secondary">IBAN</Typography>
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 1.5,
-                    fontFamily: 'monospace',
-                    fontSize: '0.85rem',
-                    mb: 2,
-                    borderColor: BRAND.border,
-                    bgcolor: BRAND.grey
-                  }}
-                >
+                <Typography variant="caption" sx={{ color: C.muted }}>IBAN</Typography>
+                <Paper variant="outlined" sx={{ p: 1.5, mb: 2, borderColor: C.border, bgcolor: '#f9fafb', fontFamily: 'monospace', fontSize: '0.8rem' }}>
                   <Stack direction="row" alignItems="center">
-                    <Box sx={{ flex: 1, wordBreak: 'break-all' }}>{IBAN}</Box>
+                    <Box sx={{ flex: 1, color: C.black, wordBreak: 'break-all' }}>{IBAN}</Box>
                     <IconButton size="small" onClick={() => handleCopy(IBAN.replace(/\s/g, ''), 'IBAN kopyalandı')}>
                       <ContentCopy fontSize="small" />
                     </IconButton>
@@ -453,39 +413,26 @@ const CustomerProfile = () => {
                   href={`https://wa.me/${WHATSAPP}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{
-                    mb: 1,
-                    bgcolor: BRAND.black,
-                    color: BRAND.white,
-                    '&:hover': { bgcolor: '#222' }
-                  }}
+                  sx={{ bgcolor: C.whatsapp, color: C.white, fontWeight: 600, py: 1.2, '&:hover': { bgcolor: '#1da851' } }}
                 >
                   Dekont Gönder (WhatsApp)
                 </Button>
-                <Typography variant="caption" color="text.secondary" display="block" textAlign="center">
-                  Ödeme sonrası dekontu bu kanaldan iletebilirsiniz
-                </Typography>
               </CardContent>
             </Card>
           </Grid>
 
-          {/* Sağ: sekmeler */}
           <Grid item xs={12} md={8}>
-            <Card
-              elevation={0}
-              sx={{ borderRadius: 2, border: `1px solid ${BRAND.border}`, bgcolor: BRAND.white }}
-            >
+            <Card elevation={0} sx={{ borderRadius: 2.5, border: `1px solid ${C.border}`, bgcolor: C.card, overflow: 'hidden' }}>
               <Tabs
                 value={tab}
                 onChange={(_, v) => setTab(v)}
                 variant={isMobile ? 'fullWidth' : 'standard'}
                 sx={{
-                  borderBottom: 1,
-                  borderColor: BRAND.border,
-                  px: 1,
-                  '& .MuiTab-root': { color: BRAND.muted, fontWeight: 500 },
-                  '& .Mui-selected': { color: `${BRAND.black} !important` },
-                  '& .MuiTabs-indicator': { bgcolor: BRAND.black, height: 3 }
+                  px: 2,
+                  borderBottom: `1px solid ${C.border}`,
+                  '& .MuiTab-root': { color: C.muted, fontWeight: 600, textTransform: 'none', minHeight: 52 },
+                  '& .Mui-selected': { color: `${C.black} !important` },
+                  '& .MuiTabs-indicator': { bgcolor: C.black, height: 3 }
                 }}
               >
                 <Tab label={`Taksitler (${installments.length})`} />
@@ -493,100 +440,85 @@ const CustomerProfile = () => {
               </Tabs>
 
               {tab === 0 && (
-                <CardContent>
-                  <TableContainer>
-                    <Table size={isMobile ? 'small' : 'medium'}>
-                      <TableHead>
+                <TableContainer>
+                  <Table size={isMobile ? 'small' : 'medium'}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={tableHeadSx}>#</TableCell>
+                        <TableCell sx={tableHeadSx}>Tutar</TableCell>
+                        <TableCell sx={tableHeadSx}>Vade</TableCell>
+                        <TableCell sx={tableHeadSx}>Durum</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {installments.length === 0 ? (
                         <TableRow>
-                          <TableCell>#</TableCell>
-                          <TableCell>Tutar</TableCell>
-                          <TableCell>Vade</TableCell>
-                          <TableCell>Durum</TableCell>
+                          <TableCell colSpan={4} align="center" sx={{ py: 4, color: C.muted }}>
+                            Henüz taksit kaydı yok
+                          </TableCell>
                         </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {installments.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={4} align="center">
-                              <Typography color="text.secondary" py={3}>
-                                Henüz taksit kaydı yok
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          installments.map((inst) => {
-                            const meta = getInstallmentMeta(inst);
-                            return (
-                              <TableRow key={inst.id} hover>
-                                <TableCell>{inst.installment_number}</TableCell>
-                                <TableCell>{formatMoney(inst.amount)}</TableCell>
-                                <TableCell>{formatDate(inst.due_date)}</TableCell>
-                                <TableCell>
-                                  <Chip
-                                    icon={meta.icon}
-                                    label={meta.label}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={meta.chipSx}
-                                  />
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </CardContent>
+                      ) : (
+                        installments.map((inst) => {
+                          const meta = getInstallmentMeta(inst);
+                          return (
+                            <TableRow key={inst.id} hover sx={{ '&:hover': { bgcolor: '#f9fafb' } }}>
+                              <TableCell sx={{ color: C.black, fontWeight: 600 }}>{inst.installment_number}</TableCell>
+                              <TableCell sx={{ color: C.black }}>{formatMoney(inst.amount)}</TableCell>
+                              <TableCell sx={{ color: C.muted }}>{formatDate(inst.due_date)}</TableCell>
+                              <TableCell>
+                                <Chip icon={meta.icon} label={meta.label} size="small" sx={meta.sx} />
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               )}
 
               {tab === 1 && (
-                <CardContent>
-                  <TableContainer>
-                    <Table size={isMobile ? 'small' : 'medium'}>
-                      <TableHead>
+                <TableContainer>
+                  <Table size={isMobile ? 'small' : 'medium'}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={tableHeadSx}>Satış</TableCell>
+                        <TableCell sx={tableHeadSx}>Tarih</TableCell>
+                        <TableCell sx={tableHeadSx}>Tutar</TableCell>
+                        <TableCell sx={tableHeadSx}>Taksit</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {sales.length === 0 ? (
                         <TableRow>
-                          <TableCell>Satış</TableCell>
-                          <TableCell>Tarih</TableCell>
-                          <TableCell>Tutar</TableCell>
-                          <TableCell>Taksit</TableCell>
+                          <TableCell colSpan={4} align="center" sx={{ py: 4, color: C.muted }}>
+                            Henüz satış kaydı yok
+                          </TableCell>
                         </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {sales.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={4} align="center">
-                              <Typography color="text.secondary" py={3}>
-                                Henüz satış kaydı yok
-                              </Typography>
+                      ) : (
+                        sales.map((sale) => (
+                          <TableRow key={sale.id} hover sx={{ '&:hover': { bgcolor: '#f9fafb' } }}>
+                            <TableCell>
+                              <Stack direction="row" alignItems="center" spacing={0.5}>
+                                <ShoppingBag sx={{ fontSize: 18, color: C.muted }} />
+                                <Typography component="span" fontWeight={600} sx={{ color: C.black }}>#{sale.id}</Typography>
+                              </Stack>
+                            </TableCell>
+                            <TableCell sx={{ color: C.muted }}>{formatDate(sale.created_at)}</TableCell>
+                            <TableCell sx={{ color: C.black, fontWeight: 600 }}>{formatMoney(sale.total_with_interest || sale.total_amount)}</TableCell>
+                            <TableCell>
+                              <Chip
+                                size="small"
+                                label={`${sale.paid_installments || 0} / ${sale.total_installments || sale.installment_count}`}
+                                sx={{ bgcolor: '#f3f4f6', color: C.black, fontWeight: 600 }}
+                              />
                             </TableCell>
                           </TableRow>
-                        ) : (
-                          sales.map((sale) => (
-                            <TableRow key={sale.id} hover>
-                              <TableCell>
-                                <Stack direction="row" alignItems="center" spacing={0.5}>
-                                  <ShoppingBag fontSize="small" color="action" />
-                                  <span>#{sale.id}</span>
-                                </Stack>
-                              </TableCell>
-                              <TableCell>{formatDate(sale.created_at)}</TableCell>
-                              <TableCell>{formatMoney(sale.total_with_interest || sale.total_amount)}</TableCell>
-                              <TableCell>
-                                <Chip
-                                  size="small"
-                                  label={`${sale.paid_installments || 0}/${sale.total_installments || sale.installment_count}`}
-                                  variant="outlined"
-                                  sx={{ borderColor: BRAND.black, color: BRAND.black }}
-                                />
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </CardContent>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               )}
             </Card>
           </Grid>

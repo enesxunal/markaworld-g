@@ -53,7 +53,6 @@ const theme = createTheme({
     h1: {
       fontSize: '2rem',
       fontWeight: 600,
-      color: '#000000',
       '@media (max-width:600px)': {
         fontSize: '1.5rem',
       },
@@ -61,7 +60,6 @@ const theme = createTheme({
     h2: {
       fontSize: '1.75rem',
       fontWeight: 600,
-      color: '#000000',
       '@media (max-width:600px)': {
         fontSize: '1.25rem',
       },
@@ -69,7 +67,6 @@ const theme = createTheme({
     h3: {
       fontSize: '1.5rem',
       fontWeight: 500,
-      color: '#000000',
       '@media (max-width:600px)': {
         fontSize: '1.1rem',
       },
@@ -77,7 +74,6 @@ const theme = createTheme({
     h4: {
       fontSize: '1.25rem',
       fontWeight: 500,
-      color: '#000000',
       '@media (max-width:600px)': {
         fontSize: '1rem',
       },
@@ -85,7 +81,6 @@ const theme = createTheme({
     h5: {
       fontSize: '1.1rem',
       fontWeight: 500,
-      color: '#000000',
       '@media (max-width:600px)': {
         fontSize: '0.95rem',
       },
@@ -93,21 +88,18 @@ const theme = createTheme({
     h6: {
       fontSize: '1rem',
       fontWeight: 500,
-      color: '#000000',
       '@media (max-width:600px)': {
         fontSize: '0.9rem',
       },
     },
     body1: {
       fontSize: '0.9rem',
-      color: '#000000',
       '@media (max-width:600px)': {
         fontSize: '0.8rem',
       },
     },
     body2: {
       fontSize: '0.8rem',
-      color: '#666666',
       '@media (max-width:600px)': {
         fontSize: '0.75rem',
       },

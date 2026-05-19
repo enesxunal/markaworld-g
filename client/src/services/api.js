@@ -2,6 +2,7 @@ import axios from 'axios';
 import {
   isAdminApi,
   isCustomerMeApi,
+  isProtectedAdminApi,
   clearAdminSession,
   clearCustomerSession
 } from '../utils/apiAuth';
@@ -50,7 +51,8 @@ api.interceptors.response.use(
     console.error('API Error:', msg);
 
     if (status === 401 || status === 403) {
-      if (isAdminApi(url)) {
+      // Yanlış admin şifresi (/admin/login) buraya düşmesin — sadece oturum süresi dolunca
+      if (isProtectedAdminApi(url)) {
         clearAdminSession();
         if (!window.location.pathname.startsWith('/admin/login')) {
           window.location.assign('/admin/login?session=expired');

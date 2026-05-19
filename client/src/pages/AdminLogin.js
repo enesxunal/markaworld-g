@@ -63,7 +63,14 @@ const AdminLogin = () => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError(error.response?.data?.error || 'Giriş başarısız');
+      const serverMsg = error.response?.data?.error;
+      if (error.response?.status === 401) {
+        setError(serverMsg || 'Kullanıcı adı veya şifre hatalı. Sunucudaki ADMIN_PASSWORD ile aynı olmalı.');
+      } else if (error.response?.status === 503) {
+        setError(serverMsg || 'Sunucu ayarı eksik (ADMIN_PASSWORD tanımlı değil).');
+      } else {
+        setError(serverMsg || 'Giriş başarısız');
+      }
     } finally {
       setLoading(false);
     }
