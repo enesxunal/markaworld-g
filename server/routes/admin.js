@@ -10,22 +10,23 @@ const path = require('path');
 
 function getAdminCredentials() {
   return {
-    username: process.env.ADMIN_USERNAME || 'markaworld',
-    password: process.env.ADMIN_PASSWORD
+    username: (process.env.ADMIN_USERNAME || 'markaworld').trim(),
+    password: (process.env.ADMIN_PASSWORD || '').trim()
   };
 }
 
 // Admin giriş
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const username = (req.body.username || '').trim();
+    const password = (req.body.password || '').trim();
     const admin = getAdminCredentials();
 
     if (!admin.password) {
       console.error('ADMIN_PASSWORD tanımlı değil (.env)');
       return res.status(503).json({
         success: false,
-        error: 'Sunucu yapılandırması eksik'
+        error: 'Sunucu yapılandırması eksik — sunucuda reset-admin-password.sh çalıştırın'
       });
     }
 
