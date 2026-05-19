@@ -55,6 +55,16 @@ const IBAN = 'TR48 0011 1000 0000 0137 1441 61';
 const COMPANY_NAME = '3 Kare Yazılım ve Tasarım Ajansı Limited Şirketi';
 const WHATSAPP = '905368324660';
 
+// Marka World — siyah / beyaz
+const BRAND = {
+  black: '#000000',
+  white: '#ffffff',
+  bg: '#fafafa',
+  grey: '#f0f0f0',
+  border: '#e0e0e0',
+  muted: '#6b6b6b'
+};
+
 const formatMoney = (value) =>
   (parseFloat(value) || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
 
@@ -68,12 +78,24 @@ const getInstallmentMeta = (installment) => {
   today.setHours(0, 0, 0, 0);
 
   if (status === 'paid') {
-    return { label: 'Ödendi', color: 'success', icon: <CheckCircle fontSize="small" /> };
+    return {
+      label: 'Ödendi',
+      icon: <CheckCircle fontSize="small" />,
+      chipSx: { borderColor: BRAND.black, color: BRAND.black, bgcolor: BRAND.white }
+    };
   }
   if (status === 'overdue' || (status === 'unpaid' && due < today)) {
-    return { label: 'Gecikmiş', color: 'error', icon: <ErrorIcon fontSize="small" /> };
+    return {
+      label: 'Gecikmiş',
+      icon: <ErrorIcon fontSize="small" />,
+      chipSx: { borderColor: BRAND.black, color: BRAND.white, bgcolor: BRAND.black }
+    };
   }
-  return { label: 'Bekliyor', color: 'warning', icon: <Warning fontSize="small" /> };
+  return {
+    label: 'Bekliyor',
+    icon: <Warning fontSize="small" />,
+    chipSx: { borderColor: BRAND.muted, color: BRAND.muted, bgcolor: BRAND.white }
+  };
 };
 
 const CustomerProfile = () => {
@@ -178,7 +200,7 @@ const CustomerProfile = () => {
   }
 
   return (
-    <Box sx={{ bgcolor: '#f4f6f8', minHeight: '100vh', pb: 4 }}>
+    <Box sx={{ bgcolor: BRAND.bg, minHeight: '100vh', pb: 4 }}>
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={2000}
@@ -190,22 +212,31 @@ const CustomerProfile = () => {
       {/* Üst banner */}
       <Box
         sx={{
-          background: 'linear-gradient(135deg, #1a237e 0%, #3949ab 50%, #5c6bc0 100%)',
-          color: 'white',
+          bgcolor: BRAND.black,
+          color: BRAND.white,
           py: 3,
-          px: 2
+          px: 2,
+          borderBottom: `3px solid ${BRAND.white}`
         }}
       >
         <Container maxWidth="lg">
           <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
             <Stack direction="row" alignItems="center" spacing={2}>
+              <Box
+                component="img"
+                src="/logo.png"
+                alt="Marka World"
+                sx={{ height: 40, width: 'auto', display: { xs: 'none', sm: 'block' } }}
+              />
               <Avatar
                 sx={{
                   width: 56,
                   height: 56,
-                  bgcolor: 'rgba(255,255,255,0.2)',
+                  bgcolor: BRAND.white,
+                  color: BRAND.black,
                   fontSize: '1.4rem',
-                  fontWeight: 700
+                  fontWeight: 700,
+                  border: `2px solid ${BRAND.white}`
                 }}
               >
                 {customer?.name?.charAt(0)?.toUpperCase() || '?'}
@@ -223,11 +254,15 @@ const CustomerProfile = () => {
               </Box>
             </Stack>
             <Button
-              variant="contained"
-              color="inherit"
+              variant="outlined"
               onClick={handleLogout}
               startIcon={<ExitToApp />}
-              sx={{ color: '#1a237e', fontWeight: 600 }}
+              sx={{
+                color: BRAND.white,
+                borderColor: BRAND.white,
+                fontWeight: 600,
+                '&:hover': { borderColor: BRAND.grey, bgcolor: 'rgba(255,255,255,0.08)' }
+              }}
             >
               Çıkış
             </Button>
@@ -236,7 +271,16 @@ const CustomerProfile = () => {
       </Box>
 
       <Container maxWidth="lg" sx={{ mt: -2 }}>
-        {loading && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
+        {loading && (
+          <LinearProgress
+            sx={{
+              mb: 2,
+              borderRadius: 1,
+              bgcolor: BRAND.grey,
+              '& .MuiLinearProgress-bar': { bgcolor: BRAND.black }
+            }}
+          />
+        )}
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} action={
@@ -249,22 +293,28 @@ const CustomerProfile = () => {
         {/* Özet kartlar */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           {[
-            { title: 'Kredi Limiti', value: formatMoney(stats.creditLimit), color: 'primary.main' },
-            { title: 'Mevcut Borç', value: formatMoney(stats.currentDebt), color: 'error.main' },
-            { title: 'Kullanılabilir', value: formatMoney(stats.available), color: 'success.main' },
+            { title: 'Kredi Limiti', value: formatMoney(stats.creditLimit) },
+            { title: 'Mevcut Borç', value: formatMoney(stats.currentDebt) },
+            { title: 'Kullanılabilir', value: formatMoney(stats.available) },
             {
               title: 'Sonraki Taksit',
-              value: stats.nextDue ? formatDate(stats.nextDue) : 'Yok',
-              color: 'text.primary'
+              value: stats.nextDue ? formatDate(stats.nextDue) : 'Yok'
             }
           ].map((item) => (
             <Grid item xs={6} md={3} key={item.title}>
-              <Card elevation={2} sx={{ borderRadius: 2 }}>
+              <Card
+                elevation={0}
+                sx={{
+                  borderRadius: 2,
+                  border: `1px solid ${BRAND.border}`,
+                  bgcolor: BRAND.white
+                }}
+              >
                 <CardContent sx={{ py: 2 }}>
                   <Typography variant="caption" color="text.secondary">
                     {item.title}
                   </Typography>
-                  <Typography variant="h6" fontWeight={700} sx={{ color: item.color, mt: 0.5 }}>
+                  <Typography variant="h6" fontWeight={700} sx={{ color: BRAND.black, mt: 0.5 }}>
                     {loading ? '...' : item.value}
                   </Typography>
                 </CardContent>
@@ -274,7 +324,10 @@ const CustomerProfile = () => {
         </Grid>
 
         {/* Limit kullanımı */}
-        <Card elevation={2} sx={{ mb: 3, borderRadius: 2, p: 2 }}>
+        <Card
+          elevation={0}
+          sx={{ mb: 3, borderRadius: 2, p: 2, border: `1px solid ${BRAND.border}`, bgcolor: BRAND.white }}
+        >
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
             <Typography variant="subtitle2" color="text.secondary">
               Limit kullanımı
@@ -289,18 +342,35 @@ const CustomerProfile = () => {
             sx={{
               height: 10,
               borderRadius: 5,
-              bgcolor: '#e8eaf6',
+              bgcolor: BRAND.grey,
               '& .MuiLinearProgress-bar': {
                 borderRadius: 5,
-                bgcolor: stats.usagePercent > 80 ? 'error.main' : 'primary.main'
+                bgcolor: stats.usagePercent > 80 ? BRAND.black : '#333333'
               }
             }}
           />
           <Stack direction="row" spacing={2} mt={2} flexWrap="wrap">
-            <Chip size="small" icon={<CheckCircle />} label={`${stats.paidCount} ödendi`} color="success" variant="outlined" />
-            <Chip size="small" icon={<Schedule />} label={`${stats.pendingCount} bekliyor`} color="warning" variant="outlined" />
+            <Chip
+              size="small"
+              icon={<CheckCircle />}
+              label={`${stats.paidCount} ödendi`}
+              variant="outlined"
+              sx={{ borderColor: BRAND.black, color: BRAND.black }}
+            />
+            <Chip
+              size="small"
+              icon={<Schedule />}
+              label={`${stats.pendingCount} bekliyor`}
+              variant="outlined"
+              sx={{ borderColor: BRAND.muted, color: BRAND.muted }}
+            />
             {stats.overdueCount > 0 && (
-              <Chip size="small" icon={<ErrorIcon />} label={`${stats.overdueCount} gecikmiş`} color="error" />
+              <Chip
+                size="small"
+                icon={<ErrorIcon />}
+                label={`${stats.overdueCount} gecikmiş`}
+                sx={{ bgcolor: BRAND.black, color: BRAND.white }}
+              />
             )}
           </Stack>
         </Card>
@@ -308,7 +378,10 @@ const CustomerProfile = () => {
         <Grid container spacing={3}>
           {/* Sol: iletişim */}
           <Grid item xs={12} md={4}>
-            <Card elevation={2} sx={{ borderRadius: 2, height: '100%' }}>
+            <Card
+              elevation={0}
+              sx={{ borderRadius: 2, height: '100%', border: `1px solid ${BRAND.border}`, bgcolor: BRAND.white }}
+            >
               <CardContent>
                 <Typography variant="h6" gutterBottom fontWeight={600}>
                   Hesap Bilgileri
@@ -316,19 +389,19 @@ const CustomerProfile = () => {
                 <Divider sx={{ mb: 2 }} />
                 <List dense disablePadding>
                   <ListItem disablePadding sx={{ mb: 1.5 }}>
-                    <ListItemIcon sx={{ minWidth: 36 }}><Phone color="primary" fontSize="small" /></ListItemIcon>
+                    <ListItemIcon sx={{ minWidth: 36, color: BRAND.black }}><Phone fontSize="small" /></ListItemIcon>
                     <ListItemText primary="Telefon" secondary={customer?.phone || '-'} />
                   </ListItem>
                   <ListItem disablePadding sx={{ mb: 1.5 }}>
-                    <ListItemIcon sx={{ minWidth: 36 }}><Email color="primary" fontSize="small" /></ListItemIcon>
+                    <ListItemIcon sx={{ minWidth: 36, color: BRAND.black }}><Email fontSize="small" /></ListItemIcon>
                     <ListItemText primary="E-posta" secondary={customer?.email || '-'} />
                   </ListItem>
                   <ListItem disablePadding sx={{ mb: 1.5 }}>
-                    <ListItemIcon sx={{ minWidth: 36 }}><Badge color="primary" fontSize="small" /></ListItemIcon>
+                    <ListItemIcon sx={{ minWidth: 36, color: BRAND.black }}><Badge fontSize="small" /></ListItemIcon>
                     <ListItemText primary="T.C. Kimlik No" secondary={customer?.tc_no || '-'} />
                   </ListItem>
                   <ListItem disablePadding>
-                    <ListItemIcon sx={{ minWidth: 36 }}><Home color="primary" fontSize="small" /></ListItemIcon>
+                    <ListItemIcon sx={{ minWidth: 36, color: BRAND.black }}><Home fontSize="small" /></ListItemIcon>
                     <ListItemText primary="Adres" secondary={customer?.address || 'Belirtilmemiş'} />
                   </ListItem>
                 </List>
@@ -336,10 +409,13 @@ const CustomerProfile = () => {
             </Card>
 
             {/* Ödeme bilgileri */}
-            <Card elevation={2} sx={{ borderRadius: 2, mt: 2 }}>
+            <Card
+              elevation={0}
+              sx={{ borderRadius: 2, mt: 2, border: `1px solid ${BRAND.border}`, bgcolor: BRAND.white }}
+            >
               <CardContent>
                 <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                  <AccountBalance color="primary" />
+                  <AccountBalance sx={{ color: BRAND.black }} />
                   <Typography variant="h6" fontWeight={600}>Ödeme Bilgileri</Typography>
                 </Stack>
                 <Typography variant="caption" color="text.secondary">Alıcı</Typography>
@@ -352,7 +428,17 @@ const CustomerProfile = () => {
                   </IconButton>
                 </Stack>
                 <Typography variant="caption" color="text.secondary">IBAN</Typography>
-                <Paper variant="outlined" sx={{ p: 1.5, fontFamily: 'monospace', fontSize: '0.85rem', mb: 2 }}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 1.5,
+                    fontFamily: 'monospace',
+                    fontSize: '0.85rem',
+                    mb: 2,
+                    borderColor: BRAND.border,
+                    bgcolor: BRAND.grey
+                  }}
+                >
                   <Stack direction="row" alignItems="center">
                     <Box sx={{ flex: 1, wordBreak: 'break-all' }}>{IBAN}</Box>
                     <IconButton size="small" onClick={() => handleCopy(IBAN.replace(/\s/g, ''), 'IBAN kopyalandı')}>
@@ -363,12 +449,16 @@ const CustomerProfile = () => {
                 <Button
                   fullWidth
                   variant="contained"
-                  color="success"
                   startIcon={<WhatsApp />}
                   href={`https://wa.me/${WHATSAPP}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{ mb: 1 }}
+                  sx={{
+                    mb: 1,
+                    bgcolor: BRAND.black,
+                    color: BRAND.white,
+                    '&:hover': { bgcolor: '#222' }
+                  }}
                 >
                   Dekont Gönder (WhatsApp)
                 </Button>
@@ -381,12 +471,22 @@ const CustomerProfile = () => {
 
           {/* Sağ: sekmeler */}
           <Grid item xs={12} md={8}>
-            <Card elevation={2} sx={{ borderRadius: 2 }}>
+            <Card
+              elevation={0}
+              sx={{ borderRadius: 2, border: `1px solid ${BRAND.border}`, bgcolor: BRAND.white }}
+            >
               <Tabs
                 value={tab}
                 onChange={(_, v) => setTab(v)}
                 variant={isMobile ? 'fullWidth' : 'standard'}
-                sx={{ borderBottom: 1, borderColor: 'divider', px: 1 }}
+                sx={{
+                  borderBottom: 1,
+                  borderColor: BRAND.border,
+                  px: 1,
+                  '& .MuiTab-root': { color: BRAND.muted, fontWeight: 500 },
+                  '& .Mui-selected': { color: `${BRAND.black} !important` },
+                  '& .MuiTabs-indicator': { bgcolor: BRAND.black, height: 3 }
+                }}
               >
                 <Tab label={`Taksitler (${installments.length})`} />
                 <Tab label={`Satışlar (${sales.length})`} />
@@ -425,9 +525,9 @@ const CustomerProfile = () => {
                                   <Chip
                                     icon={meta.icon}
                                     label={meta.label}
-                                    color={meta.color}
                                     size="small"
                                     variant="outlined"
+                                    sx={meta.chipSx}
                                   />
                                 </TableCell>
                               </TableRow>
@@ -476,8 +576,8 @@ const CustomerProfile = () => {
                                 <Chip
                                   size="small"
                                   label={`${sale.paid_installments || 0}/${sale.total_installments || sale.installment_count}`}
-                                  color="primary"
                                   variant="outlined"
+                                  sx={{ borderColor: BRAND.black, color: BRAND.black }}
                                 />
                               </TableCell>
                             </TableRow>
