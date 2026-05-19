@@ -47,8 +47,10 @@ const CustomerLogin = () => {
       const response = await customerAPI.login(formData);
       
       if (response.data.success) {
-        // Müşteri bilgilerini localStorage'a kaydet
         localStorage.setItem('customer', JSON.stringify(response.data.customer));
+        if (response.data.token) {
+          localStorage.setItem('customerToken', response.data.token);
+        }
         
         // Müşteri profil sayfasına yönlendir
         navigate('/customer/profile');

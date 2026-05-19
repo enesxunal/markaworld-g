@@ -125,12 +125,13 @@ router.get('/future-payments', auth.authenticateAdmin, async (req, res) => {
 
     // Toplamları hesapla
     const totals = payments.reduce((acc, payment) => {
+      const amount = parseFloat(payment.amount) || 0;
       if (payment.status === 'paid') {
-        acc.paid += payment.amount;
+        acc.paid += amount;
       } else if (payment.calculated_status === 'overdue') {
-        acc.overdue += payment.amount;
+        acc.overdue += amount;
       } else {
-        acc.unpaid += payment.amount;
+        acc.unpaid += amount;
       }
       return acc;
     }, { paid: 0, unpaid: 0, overdue: 0 });

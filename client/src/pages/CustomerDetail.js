@@ -226,7 +226,7 @@ function CustomerDetail() {
                   <TableBody>
                     {installments.map((installment) => (
                       <TableRow key={installment.id}>
-                        <TableCell>{installment.installment_no}</TableCell>
+                        <TableCell>{installment.installment_number}</TableCell>
                         <TableCell>{parseFloat(installment.amount).toLocaleString('tr-TR')}₺</TableCell>
                         <TableCell>{format(new Date(installment.due_date), 'dd.MM.yyyy')}</TableCell>
                         <TableCell>

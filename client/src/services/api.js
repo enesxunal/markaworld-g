@@ -11,17 +11,26 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Önce admin token'ı kontrol et
+    const url = config.url || '';
+    const isCustomerMe = url.includes('/customers/me');
+
+    if (isCustomerMe) {
+      const customerToken = localStorage.getItem('customerToken');
+      if (customerToken) {
+        config.headers.Authorization = `Bearer ${customerToken}`;
+        return config;
+      }
+    }
+
     const adminToken = localStorage.getItem('adminToken');
     if (adminToken) {
       config.headers.Authorization = `Bearer ${adminToken}`;
       return config;
     }
 
-    // Admin token yoksa normal token'ı kontrol et
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const customerToken = localStorage.getItem('customerToken');
+    if (customerToken) {
+      config.headers.Authorization = `Bearer ${customerToken}`;
     }
     return config;
   },
@@ -74,11 +83,16 @@ export const customerAPI = {
   // Sözleşme onayı ve kayıt tamamlama
   completeRegistration: (token, agreements) => api.post(`/customers/complete-registration/${token}`, agreements),
   
-  // Müşteri satışları
+  // Müşteri satışları (admin)
   getSales: (customerId) => api.get(`/customers/${customerId}/sales`),
   
-  // Müşteri taksitleri
+  // Müşteri taksitleri (admin)
   getInstallments: (customerId) => api.get(`/customers/${customerId}/installments`),
+
+  // Müşteri paneli (giriş yapmış müşteri)
+  getMe: () => api.get('/customers/me'),
+  getMySales: () => api.get('/customers/me/sales'),
+  getMyInstallments: () => api.get('/customers/me/installments'),
 };
 
 // Satış API'leri

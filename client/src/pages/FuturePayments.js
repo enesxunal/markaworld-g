@@ -60,15 +60,11 @@ const FuturePayments = () => {
   const handlePayment = async () => {
     try {
       setLoading(true);
-      const response = await salesAPI.payInstallment(
+      await salesAPI.payInstallment(
         selectedPayment.sale_id,
         selectedPayment.installment_id,
-        paymentDate.format('YYYY-MM-DD')
+        { payment_date: paymentDate.format('YYYY-MM-DD') }
       );
-
-      if (response.error) {
-        throw new Error(response.error);
-      }
 
       // Ödeme başarılı, listeyi güncelle
       fetchPayments();

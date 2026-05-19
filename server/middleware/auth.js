@@ -80,7 +80,14 @@ const authenticateCustomer = (req, res, next) => {
       return res.status(503).json({ success: false, error: 'Sunucu yapılandırması eksik' });
     }
     const decoded = jwt.verify(token, jwtSecret);
+    if (!decoded?.id || decoded.role !== 'customer') {
+      return res.status(403).json({
+        success: false,
+        error: 'Bu işlem için müşteri oturumu gerekli'
+      });
+    }
     req.customer = decoded;
+    req.customerId = decoded.id;
     next();
   } catch (error) {
     res.status(401).json({

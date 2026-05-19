@@ -4,7 +4,8 @@ const { db } = require('../database/init');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const emailService = require('../services/emailService');
-const { authenticateAdmin } = require('../middleware/auth');
+const jwt = require('jsonwebtoken');
+const { authenticateAdmin, authenticateCustomer } = require('../middleware/auth');
 const { hoursFromNow } = require('../utils/datetime');
 const router = express.Router();
 
@@ -112,6 +113,89 @@ router.post('/resend-verification', [
       error: 'E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin veya bizimle iletişime geçin.'
     });
   }
+});
+
+// Müşteri paneli — kendi hesabı (JWT gerekli)
+router.get('/me', authenticateCustomer, (req, res) => {
+  const customerId = req.customerId;
+
+  db.get('SELECT * FROM customers WHERE id = ?', [customerId], (err, customer) => {
+    if (err) {
+      return res.status(500).json({ error: 'Müşteri getirilemedi' });
+    }
+    if (!customer) {
+      return res.status(404).json({ error: 'Müşteri bulunamadı' });
+    }
+
+    const salesQuery = `
+      SELECT s.*,
+        (SELECT COUNT(*) FROM installments WHERE sale_id = s.id AND status = 'paid') as paid_installments,
+        (SELECT COUNT(*) FROM installments WHERE sale_id = s.id) as total_installments,
+        (SELECT SUM(amount) FROM installments WHERE sale_id = s.id AND status = 'unpaid') as remaining_debt
+      FROM sales s
+      WHERE s.customer_id = ? AND s.status = 'approved'
+      ORDER BY s.created_at DESC
+    `;
+
+    db.all(salesQuery, [customerId], (err2, sales) => {
+      if (err2) {
+        return res.status(500).json({ error: 'Satış geçmişi getirilemedi' });
+      }
+
+      const totalRemainingDebt = sales.reduce(
+        (total, sale) => total + (parseFloat(sale.remaining_debt) || 0),
+        0
+      );
+
+      res.json({
+        ...sanitizeCustomer(customer),
+        current_debt: totalRemainingDebt,
+        sales
+      });
+    });
+  });
+});
+
+router.get('/me/sales', authenticateCustomer, (req, res) => {
+  const customerId = req.customerId;
+  const query = `
+    SELECT s.*,
+      (SELECT COUNT(*) FROM installments WHERE sale_id = s.id AND status = 'paid') as paid_installments,
+      (SELECT COUNT(*) FROM installments WHERE sale_id = s.id) as total_installments
+    FROM sales s
+    WHERE s.customer_id = ? AND s.status = 'approved'
+    ORDER BY s.created_at DESC
+  `;
+
+  db.all(query, [customerId], (err, sales) => {
+    if (err) {
+      return res.status(500).json({ error: 'Satışlar getirilemedi' });
+    }
+    res.json(sales);
+  });
+});
+
+router.get('/me/installments', authenticateCustomer, (req, res) => {
+  const customerId = req.customerId;
+  const query = `
+    SELECT i.*, s.id as sale_id, s.total_amount as sale_total,
+      CASE
+        WHEN i.status = 'paid' THEN 'paid'
+        WHEN i.status = 'unpaid' AND date(i.due_date) < date('now') THEN 'overdue'
+        ELSE 'unpaid'
+      END as display_status
+    FROM installments i
+    JOIN sales s ON i.sale_id = s.id
+    WHERE s.customer_id = ? AND s.status = 'approved'
+    ORDER BY i.due_date ASC
+  `;
+
+  db.all(query, [customerId], (err, installments) => {
+    if (err) {
+      return res.status(500).json({ error: 'Taksitler getirilemedi' });
+    }
+    res.json(installments);
+  });
 });
 
 // Müşteri detayı getir (admin)
@@ -367,8 +451,20 @@ router.post('/login', [
       });
     }
 
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return res.status(503).json({ success: false, error: 'Sunucu yapılandırması eksik' });
+    }
+
+    const token = jwt.sign(
+      { id: customer.id, email: customer.email, role: 'customer' },
+      jwtSecret,
+      { expiresIn: '30d' }
+    );
+
     res.json({
       success: true,
+      token,
       customer: {
         id: customer.id,
         name: customer.name,
