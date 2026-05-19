@@ -196,7 +196,14 @@ router.get('/customers/emails', authenticateAdmin, (req, res) => {
 // Toplu mail gönder
 router.post('/send-bulk-email', authenticateAdmin, async (req, res) => {
   try {
-    const { recipients, subject, messageContent } = req.body;
+    const {
+      recipients,
+      subject,
+      messageContent,
+      useFullHtml = false,
+      useWrapper = true,
+      appendUnsubscribe = true
+    } = req.body;
 
     // Validasyon
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
@@ -206,15 +213,18 @@ router.post('/send-bulk-email', authenticateAdmin, async (req, res) => {
       });
     }
 
-    if (!subject || !messageContent) {
+    if (!subject || !messageContent || !String(messageContent).trim()) {
       return res.status(400).json({
         success: false,
         error: 'Konu ve mesaj içeriği gerekli'
       });
     }
 
-    // Mailleri gönder
-    const result = await emailService.sendBulkEmail(recipients, subject, messageContent);
+    const result = await emailService.sendBulkEmail(recipients, subject, messageContent, {
+      useFullHtml: Boolean(useFullHtml),
+      useWrapper: useFullHtml ? false : Boolean(useWrapper),
+      appendUnsubscribe: Boolean(appendUnsubscribe)
+    });
 
     res.json({
       success: true,

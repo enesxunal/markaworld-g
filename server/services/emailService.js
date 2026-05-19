@@ -263,18 +263,47 @@ async function sendOverduePaymentEmail(customer, installment) {
   }
 }
 
-function wrapCampaignHtml(htmlContent, recipientEmail) {
+function unsubscribeFooterHtml(recipientEmail) {
   const unsubUrl = `${getFrontendUrl()}/unsubscribe?email=${encodeURIComponent(recipientEmail)}`;
-  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;border:1px solid #e5e5e5;border-radius:8px">
+  return `<div style="padding:16px 24px;border-top:1px solid #eee;background:#fafafa;font-size:12px;color:#666;text-align:center">
+Marka World kampanya — <a href="${unsubUrl}" style="color:#666">listeden çıkın</a>
+</div>`;
+}
+
+function wrapCampaignHtml(htmlContent, recipientEmail) {
+  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;border:1px solid #e5e5e5;border-radius:8px;overflow:hidden">
 <div style="background:#000;padding:24px;text-align:center"><p style="margin:0;color:#fff;font-size:20px;font-weight:bold">MARKA WORLD</p></div>
 <div style="padding:28px 24px;color:#111;line-height:1.6">${htmlContent}</div>
-<div style="padding:16px 24px;border-top:1px solid #eee;background:#fafafa;font-size:12px;color:#666">Kampanya — <a href="${unsubUrl}">listeden çıkın</a></div>
+${unsubscribeFooterHtml(recipientEmail)}
 </div>`;
+}
+
+function buildBulkHtml(messageContent, recipientEmail, options = {}) {
+  const useFullHtml = Boolean(options.useFullHtml);
+  const useWrapper = options.useWrapper !== false;
+  const appendUnsubscribe = options.appendUnsubscribe !== false;
+  let html = messageContent;
+
+  if (useFullHtml) {
+    if (appendUnsubscribe && !/unsubscribe/i.test(html)) {
+      html += unsubscribeFooterHtml(recipientEmail);
+    }
+    return html;
+  }
+
+  if (useWrapper) {
+    return wrapCampaignHtml(html, recipientEmail);
+  }
+
+  if (appendUnsubscribe && !/unsubscribe/i.test(html)) {
+    html += unsubscribeFooterHtml(recipientEmail);
+  }
+  return html;
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function sendBulkEmail(recipients, subject, messageContent) {
+async function sendBulkEmail(recipients, subject, messageContent, options = {}) {
   let totalSent = 0;
   let totalFailed = 0;
   const errors = [];
@@ -282,7 +311,7 @@ async function sendBulkEmail(recipients, subject, messageContent) {
 
   for (const email of unique) {
     try {
-      const html = wrapCampaignHtml(messageContent, email);
+      const html = buildBulkHtml(messageContent, email, options);
       await sendMail(email, subject, html);
       totalSent += 1;
       await sleep(350);
@@ -304,6 +333,7 @@ module.exports = {
   sendPaymentReminderEmail,
   sendOverduePaymentEmail,
   sendBulkEmail,
+  buildBulkHtml,
   sendTemplatedEmail,
   createTransporter,
   getFrontendUrl,
