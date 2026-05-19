@@ -61,6 +61,36 @@ router.post('/test', authenticateAdmin, async (req, res) => {
   }
 });
 
+// Kampanya listesinden çık
+router.post('/unsubscribe', (req, res) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'E-posta gerekli' });
+  }
+
+  db.run(
+    'UPDATE customers SET marketing_unsubscribed = 1, updated_at = CURRENT_TIMESTAMP WHERE lower(email) = ?',
+    [email],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ success: false, message: 'İşlem başarısız' });
+      }
+      const customerUpdates = this.changes;
+      db.run(
+        `UPDATE newsletter_subscribers SET status = 'inactive', unsubscribed_at = CURRENT_TIMESTAMP WHERE lower(email) = ?`,
+        [email],
+        function () {
+          res.json({
+            success: true,
+            message: 'Kampanya e-postalarından çıkarıldınız',
+            updated: customerUpdates + this.changes
+          });
+        }
+      );
+    }
+  );
+});
+
 // Mail listesine kayıt
 router.post('/subscribe', (req, res) => {
   const { email } = req.body;

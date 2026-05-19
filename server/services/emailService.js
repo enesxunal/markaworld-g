@@ -263,22 +263,36 @@ async function sendOverduePaymentEmail(customer, installment) {
   }
 }
 
+function wrapCampaignHtml(htmlContent, recipientEmail) {
+  const unsubUrl = `${getFrontendUrl()}/unsubscribe?email=${encodeURIComponent(recipientEmail)}`;
+  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;border:1px solid #e5e5e5;border-radius:8px">
+<div style="background:#000;padding:24px;text-align:center"><p style="margin:0;color:#fff;font-size:20px;font-weight:bold">MARKA WORLD</p></div>
+<div style="padding:28px 24px;color:#111;line-height:1.6">${htmlContent}</div>
+<div style="padding:16px 24px;border-top:1px solid #eee;background:#fafafa;font-size:12px;color:#666">Kampanya — <a href="${unsubUrl}">listeden çıkın</a></div>
+</div>`;
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function sendBulkEmail(recipients, subject, messageContent) {
   let totalSent = 0;
   let totalFailed = 0;
   const errors = [];
+  const unique = [...new Set(recipients.map((e) => String(e).trim().toLowerCase()).filter(Boolean))];
 
-  for (const email of recipients) {
+  for (const email of unique) {
     try {
-      await sendMail(email, subject, messageContent);
+      const html = wrapCampaignHtml(messageContent, email);
+      await sendMail(email, subject, html);
       totalSent += 1;
+      await sleep(350);
     } catch (err) {
       totalFailed += 1;
       errors.push({ email, error: err.message });
     }
   }
 
-  return { totalSent, totalFailed, errors };
+  return { totalSent, totalFailed, errors, totalRecipients: unique.length };
 }
 
 module.exports = {

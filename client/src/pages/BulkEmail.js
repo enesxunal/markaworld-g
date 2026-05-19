@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Paper,
   Typography,
   TextField,
@@ -12,118 +11,121 @@ import {
   CircularProgress,
   Chip,
   Box,
-  Divider
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
-import { Send as SendIcon } from '@mui/icons-material';
+import { Send as SendIcon, Refresh as RefreshIcon, People as PeopleIcon } from '@mui/icons-material';
 import { adminAPI } from '../services/api';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
+const quillModules = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline'],
+    [{ color: [] }],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    ['link'],
+    ['clean']
+  ]
+};
+
+const isEmptyHtml = (html) => {
+  const text = (html || '').replace(/<[^>]*>/g, '').trim();
+  return !text;
+};
+
 const BulkEmail = () => {
   const [loading, setLoading] = useState(false);
-  const [customerEmails, setCustomerEmails] = useState([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [recipients, setRecipients] = useState([]);
   const [selectedEmails, setSelectedEmails] = useState([]);
   const [customEmails, setCustomEmails] = useState('');
   const [subject, setSubject] = useState('');
   const [messageContent, setMessageContent] = useState('');
   const [selectAll, setSelectAll] = useState(false);
   const [result, setResult] = useState(null);
+  const [listError, setListError] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const modules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'align': [] }],
-      ['link'],
-      ['clean']
-    ]
-  };
-
-  const formats = [
-    'header',
-    'bold', 'italic', 'underline', 'strike',
-    'color', 'background',
-    'list', 'bullet',
-    'align',
-    'link'
-  ];
-
-  // Müşteri emaillerini yükle
-  useEffect(() => {
-    const loadCustomerEmails = async () => {
-      try {
-        const response = await adminAPI.get('/customers/emails');
-        if (response.data.success) {
-          setCustomerEmails(response.data.emails);
-        }
-      } catch (error) {
-        console.error('Email listesi yükleme hatası:', error);
+  const loadRecipients = async () => {
+    try {
+      setListLoading(true);
+      setListError('');
+      const response = await adminAPI.get('/customers/emails');
+      if (response.data.success) {
+        const list = response.data.recipients || response.data.emails.map((e) => ({ email: e, name: '' }));
+        setRecipients(list);
+      } else {
+        setListError('Liste alınamadı');
       }
-    };
-
-    loadCustomerEmails();
-  }, []);
-
-  // Tümünü seç/kaldır
-  const handleSelectAll = (event) => {
-    setSelectAll(event.target.checked);
-    if (event.target.checked) {
-      setSelectedEmails(customerEmails);
-    } else {
-      setSelectedEmails([]);
+    } catch (error) {
+      setListError(error.response?.data?.error || 'Müşteri listesi yüklenemedi');
+      setRecipients([]);
+    } finally {
+      setListLoading(false);
     }
   };
 
-  // Özel email listesini işle
-  const handleCustomEmailsChange = (event) => {
-    setCustomEmails(event.target.value);
+  useEffect(() => {
+    loadRecipients();
+  }, []);
+
+  const customerEmails = recipients.map((r) => r.email);
+
+  const handleSelectAll = (event) => {
+    const checked = event.target.checked;
+    setSelectAll(checked);
+    setSelectedEmails(checked ? [...customerEmails] : []);
   };
 
-  // Mail gönder
+  const toggleEmail = (email) => {
+    setSelectedEmails((prev) =>
+      prev.includes(email) ? prev.filter((e) => e !== email) : [...prev, email]
+    );
+    setSelectAll(false);
+  };
+
+  const buildRecipientList = () => {
+    const customList = customEmails
+      .split(/[,;\n]+/)
+      .map((e) => e.trim().toLowerCase())
+      .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    return [...new Set([...selectedEmails.map((e) => e.toLowerCase()), ...customList])];
+  };
+
   const handleSendEmails = async () => {
+    const allRecipients = buildRecipientList();
+
+    if (allRecipients.length === 0) {
+      setResult({ type: 'error', message: 'En az bir alıcı seçin veya e-posta yazın' });
+      return;
+    }
+    if (!subject.trim() || isEmptyHtml(messageContent)) {
+      setResult({ type: 'error', message: 'Konu ve mail içeriği gerekli' });
+      return;
+    }
+
+    setConfirmOpen(false);
     try {
       setLoading(true);
       setResult(null);
 
-      // Özel emailleri işle
-      const customEmailList = customEmails
-        .split(',')
-        .map(email => email.trim())
-        .filter(email => email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
-
-      // Tüm alıcıları birleştir
-      const allRecipients = [...new Set([...selectedEmails, ...customEmailList])];
-
-      if (allRecipients.length === 0) {
-        setResult({
-          type: 'error',
-          message: 'En az bir alıcı seçmelisiniz'
-        });
-        return;
-      }
-
-      if (!subject || !messageContent) {
-        setResult({
-          type: 'error',
-          message: 'Konu ve mesaj içeriği gerekli'
-        });
-        return;
-      }
-
       const response = await adminAPI.post('/send-bulk-email', {
         recipients: allRecipients,
-        subject,
+        subject: subject.trim(),
         messageContent
       });
 
       if (response.data.success) {
-        setResult({
-          type: 'success',
-          message: response.data.message
-        });
-        // Formu temizle
+        let msg = response.data.message;
+        if (response.data.errors?.length) {
+          msg += ` (İlk hata: ${response.data.errors[0].email})`;
+        }
+        setResult({ type: 'success', message: msg });
         setSubject('');
         setMessageContent('');
         setCustomEmails('');
@@ -133,129 +135,152 @@ const BulkEmail = () => {
     } catch (error) {
       setResult({
         type: 'error',
-        message: 'Mail gönderimi sırasında bir hata oluştu'
+        message: error.response?.data?.error || 'Mail gönderilemedi — Gmail ayarlarını kontrol edin'
       });
     } finally {
       setLoading(false);
     }
   };
 
+  const pendingCount = buildRecipientList().length;
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
+    <Box>
       <Stack spacing={3}>
         <Paper sx={{ p: 3 }}>
-          <Stack spacing={3}>
-            <Typography variant="h4" gutterBottom>
-              Toplu Mail Gönderimi
-            </Typography>
-
-            {result && (
-              <Alert severity={result.type} onClose={() => setResult(null)}>
-                {result.message}
-              </Alert>
-            )}
-
-            <Typography variant="h6">
-              Alıcılar
-            </Typography>
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={selectAll}
-                  onChange={handleSelectAll}
-                  disabled={loading}
-                />
-              }
-              label={`Tüm Müşteriler (${customerEmails.length})`}
-            />
-
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {customerEmails.map((email) => (
-                <Chip
-                  key={email}
-                  label={email}
-                  color={selectedEmails.includes(email) ? "primary" : "default"}
-                  onClick={() => {
-                    if (selectedEmails.includes(email)) {
-                      setSelectedEmails(selectedEmails.filter(e => e !== email));
-                    } else {
-                      setSelectedEmails([...selectedEmails, email]);
-                    }
-                  }}
-                  disabled={loading}
-                />
-              ))}
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2} mb={2}>
+            <Box>
+              <Typography variant="h4" fontWeight={700} gutterBottom>
+                Toplu Kampanya Maili
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Aktif ve e-postası doğrulanmış müşterilere özel kampanya gönderin
+              </Typography>
             </Box>
-
-            <Divider />
-
-            <TextField
-              label="Özel Email Adresleri (virgülle ayırın)"
-              multiline
-              rows={2}
-              value={customEmails}
-              onChange={handleCustomEmailsChange}
-              disabled={loading}
-              helperText="Örnek: ornek1@mail.com, ornek2@mail.com"
-            />
-
-            <TextField
-              label="Mail Konusu"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              disabled={loading}
-              required
-            />
-
-            <Typography variant="subtitle2" gutterBottom>
-              Mail İçeriği
-            </Typography>
-
-            <Box sx={{ 
-              '.ql-container': {
-                minHeight: '200px',
-                fontSize: '1rem',
-                fontFamily: theme => theme.typography.fontFamily
-              },
-              '.ql-editor': {
-                minHeight: '200px'
-              },
-              '.ql-toolbar': {
-                borderTopLeftRadius: '4px',
-                borderTopRightRadius: '4px'
-              },
-              '.ql-container': {
-                borderBottomLeftRadius: '4px',
-                borderBottomRightRadius: '4px'
-              },
-              marginBottom: '50px'
-            }}>
-              <ReactQuill
-                value={messageContent}
-                onChange={setMessageContent}
-                modules={modules}
-                formats={formats}
-                readOnly={loading}
-                theme="snow"
-              />
-            </Box>
-
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
-              onClick={handleSendEmails}
-              disabled={loading}
-              sx={{ mt: 2 }}
-            >
-              {loading ? 'Gönderiliyor...' : 'Toplu Mail Gönder'}
+            <Button startIcon={<RefreshIcon />} onClick={loadRecipients} disabled={listLoading}>
+              Listeyi yenile
             </Button>
           </Stack>
+
+          {result && (
+            <Alert severity={result.type} sx={{ mb: 2 }} onClose={() => setResult(null)}>
+              {result.message}
+            </Alert>
+          )}
+
+          {listError && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {listError}
+            </Alert>
+          )}
+
+          <Alert severity="info" icon={<PeopleIcon />} sx={{ mb: 3 }}>
+            Listede <strong>{recipients.length}</strong> müşteri var (aktif + mail onaylı + listeden çıkmamış).
+            {listLoading && ' Yükleniyor...'}
+          </Alert>
+
+          <Typography variant="h6" gutterBottom>
+            Alıcılar
+          </Typography>
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={selectAll}
+                onChange={handleSelectAll}
+                disabled={loading || listLoading || recipients.length === 0}
+              />
+            }
+            label={`Tümünü seç (${recipients.length})`}
+          />
+
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2, maxHeight: 200, overflow: 'auto', p: 1, bgcolor: '#fafafa', borderRadius: 1 }}>
+            {recipients.length === 0 && !listLoading && (
+              <Typography variant="body2" color="text.secondary">
+                Henüz uygun müşteri yok — kayıt tamamlanmış aktif müşteri gerekir
+              </Typography>
+            )}
+            {recipients.map((r) => (
+              <Chip
+                key={r.email}
+                label={r.name ? `${r.name} · ${r.email}` : r.email}
+                color={selectedEmails.includes(r.email) ? 'primary' : 'default'}
+                variant={selectedEmails.includes(r.email) ? 'filled' : 'outlined'}
+                onClick={() => toggleEmail(r.email)}
+                disabled={loading}
+                size="small"
+              />
+            ))}
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          <TextField
+            label="Ek e-posta adresleri"
+            multiline
+            rows={2}
+            fullWidth
+            value={customEmails}
+            onChange={(e) => setCustomEmails(e.target.value)}
+            disabled={loading}
+            helperText="Virgül veya satır ile ayırın"
+            sx={{ mb: 2 }}
+          />
+
+          <TextField
+            label="Mail konusu"
+            fullWidth
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            disabled={loading}
+            required
+            sx={{ mb: 2 }}
+          />
+
+          <Typography variant="subtitle2" gutterBottom>
+            Kampanya içeriği
+          </Typography>
+          <Box sx={{ mb: 3, '& .ql-container': { minHeight: 200 }, '& .ql-editor': { minHeight: 200 } }}>
+            <ReactQuill
+              value={messageContent}
+              onChange={setMessageContent}
+              modules={quillModules}
+              readOnly={loading}
+              theme="snow"
+            />
+          </Box>
+
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+            onClick={() => setConfirmOpen(true)}
+            disabled={loading || listLoading}
+          >
+            {loading ? 'Gönderiliyor...' : `Kampanya Gönder (${pendingCount || selectedEmails.length} alıcı)`}
+          </Button>
         </Paper>
       </Stack>
-    </Container>
+
+      <Dialog open={confirmOpen} onClose={() => !loading && setConfirmOpen(false)}>
+        <DialogTitle>Mail gönderilsin mi?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            <strong>{buildRecipientList().length}</strong> kişiye &quot;{subject}&quot; konulu mail gidecek. Onaylıyor musunuz?
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+            Çok sayıda alıcıda gönderim birkaç dakika sürebilir.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)} disabled={loading}>İptal</Button>
+          <Button variant="contained" onClick={handleSendEmails} disabled={loading}>
+            Gönder
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 
-export default BulkEmail; 
+export default BulkEmail;

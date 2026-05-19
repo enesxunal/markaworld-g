@@ -184,10 +184,8 @@ export const adminAPI = {
 
 // Email API'leri
 export const emailAPI = {
-  // Mail listesine kayıt
   subscribe: (email) => api.post('/email/subscribe', { email }),
-  
-  // Mail listesini getir
+  unsubscribe: (email) => api.post('/email/unsubscribe', { email }),
   getList: () => api.get('/email/list')
 };
 

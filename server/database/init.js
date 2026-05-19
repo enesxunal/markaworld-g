@@ -74,9 +74,20 @@ const initDatabase = () => {
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           kvkk_approved INTEGER DEFAULT 0,
           contract_approved INTEGER DEFAULT 0,
-          electronic_approved INTEGER DEFAULT 0
+          electronic_approved INTEGER DEFAULT 0,
+          marketing_unsubscribed INTEGER DEFAULT 0
         )
       `);
+
+      // Eski veritabanları için kampanya abonelik sütunu
+      db.run(
+        'ALTER TABLE customers ADD COLUMN marketing_unsubscribed INTEGER DEFAULT 0',
+        (err) => {
+          if (err && !String(err.message).includes('duplicate column')) {
+            console.warn('marketing_unsubscribed sütunu:', err.message);
+          }
+        }
+      );
 
       // Satışlar tablosu
       db.run(`

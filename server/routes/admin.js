@@ -161,11 +161,14 @@ router.get('/backups/download/:filename', authenticateAdmin, (req, res) => {
 // Tüm müşterileri getir
 router.get('/customers/emails', authenticateAdmin, (req, res) => {
   const query = `
-    SELECT DISTINCT email 
-    FROM customers 
-    WHERE email IS NOT NULL 
-    AND email_verified = 1 
-    AND unsubscribed = 0
+    SELECT DISTINCT email, name, status, email_verified
+    FROM customers
+    WHERE email IS NOT NULL
+      AND trim(email) != ''
+      AND status = 'active'
+      AND email_verified = 1
+      AND IFNULL(marketing_unsubscribed, 0) = 0
+    ORDER BY name COLLATE NOCASE
   `;
 
   db.all(query, [], (err, rows) => {
@@ -173,14 +176,19 @@ router.get('/customers/emails', authenticateAdmin, (req, res) => {
       console.error('Müşteri email listesi hatası:', err);
       res.status(500).json({
         success: false,
-        error: 'Müşteri listesi alınamadı'
+        error: 'Müşteri listesi alınamadı: ' + err.message
       });
       return;
     }
 
     res.json({
       success: true,
-      emails: rows.map(row => row.email)
+      count: rows.length,
+      emails: rows.map((row) => row.email),
+      recipients: rows.map((row) => ({
+        email: row.email,
+        name: row.name
+      }))
     });
   });
 });
@@ -210,7 +218,10 @@ router.post('/send-bulk-email', authenticateAdmin, async (req, res) => {
 
     res.json({
       success: true,
-      message: `${result.totalSent} mail başarıyla gönderildi, ${result.totalFailed} mail başarısız`,
+      message:
+        result.totalFailed === 0
+          ? `${result.totalSent} kampanya maili gönderildi`
+          : `${result.totalSent} gönderildi, ${result.totalFailed} başarısız`,
       ...result
     });
 

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -13,6 +14,7 @@ import { emailAPI } from '../services/api';
 import PublicLayout from '../components/PublicLayout';
 
 const Unsubscribe = () => {
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
@@ -20,6 +22,11 @@ const Unsubscribe = () => {
     message: '',
     severity: 'success'
   });
+
+  useEffect(() => {
+    const fromLink = searchParams.get('email');
+    if (fromLink) setEmail(fromLink);
+  }, [searchParams]);
 
   const handleUnsubscribe = async (e) => {
     e.preventDefault();
