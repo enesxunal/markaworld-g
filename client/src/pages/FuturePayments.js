@@ -258,8 +258,14 @@ const FuturePayments = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={getStatusText(payment.status, payment.due_date)}
-                      color={getStatusColor(payment.status, payment.due_date)}
+                      label={getStatusText(
+                        payment.calculated_status || payment.status,
+                        payment.due_date
+                      )}
+                      color={getStatusColor(
+                        payment.calculated_status || payment.status,
+                        payment.due_date
+                      )}
                       size="small"
                     />
                   </TableCell>
