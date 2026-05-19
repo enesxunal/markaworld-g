@@ -89,7 +89,7 @@ const isEmptyHtml = (html) => {
 function footerPreview(email = 'ornek@mail.com') {
   const unsub = `${FRONTEND_URL}/unsubscribe?email=${encodeURIComponent(email)}`;
   return `<div style="padding:16px 24px;border-top:1px solid #eee;background:#fafafa;font-size:12px;color:#666;text-align:center">
-Marka World kampanya — <a href="${unsub}">listeden çıkın</a></motion-ignored></div>`.replace(/<\/?motion-ignored>/g, '');
+Marka World kampanya — <a href="${unsub}">listeden çıkın</a></div>`;
 }
 
 function buildPreviewHtml(content, { useFullHtml, useWrapper, appendUnsubscribe }) {
