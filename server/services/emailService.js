@@ -12,7 +12,11 @@ function getFromAddress() {
   return process.env.EMAIL_FROM || process.env.EMAIL_USER || process.env.GMAIL_USER || 'info@markaworld.com.tr';
 }
 
-let cachedTransporter = null;
+let cachedSmtpTransporter = null;
+
+function resetEmailTransporter() {
+  cachedSmtpTransporter = null;
+}
 
 function hasGmailOAuth() {
   return Boolean(
@@ -73,16 +77,12 @@ async function createGmailTransporter() {
 }
 
 async function createTransporter() {
-  if (cachedTransporter) {
-    return cachedTransporter;
-  }
-
-  // Önce Gmail OAuth (sizin kurduğunuz yöntem)
+  // Gmail: her seferinde yeni access token (cache yüzünden mail gitmeme sorununu önler)
   if (hasGmailOAuth()) {
     try {
-      cachedTransporter = await createGmailTransporter();
+      const transporter = await createGmailTransporter();
       console.log('✅ E-posta: Gmail OAuth hazır (%s)', process.env.GMAIL_USER);
-      return cachedTransporter;
+      return transporter;
     } catch (err) {
       console.error('❌ Gmail OAuth hatası:', err.message);
       if (!hasSmtpConfig()) throw err;
@@ -91,22 +91,24 @@ async function createTransporter() {
   }
 
   if (hasSmtpConfig()) {
-    cachedTransporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: parseInt(process.env.EMAIL_PORT || '465', 10),
-      secure: process.env.EMAIL_SECURE !== 'false',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+    if (!cachedSmtpTransporter) {
+      cachedSmtpTransporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: parseInt(process.env.EMAIL_PORT || '465', 10),
+        secure: process.env.EMAIL_SECURE !== 'false',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        }
+      });
+      try {
+        await cachedSmtpTransporter.verify();
+        console.log('✅ E-posta: SMTP hazır (%s)', process.env.EMAIL_HOST);
+      } catch (err) {
+        console.warn('⚠️ SMTP verify uyarısı:', err.message);
       }
-    });
-    try {
-      await cachedTransporter.verify();
-      console.log('✅ E-posta: SMTP hazır (%s)', process.env.EMAIL_HOST);
-    } catch (err) {
-      console.warn('⚠️ SMTP verify uyarısı:', err.message);
     }
-    return cachedTransporter;
+    return cachedSmtpTransporter;
   }
 
   throw new Error(
@@ -114,14 +116,33 @@ async function createTransporter() {
   );
 }
 
+function isAuthMailError(err) {
+  const msg = (err && err.message) || '';
+  return /invalid_grant|EAUTH|authentication|unauthorized|expired/i.test(msg);
+}
+
 async function sendMail(to, subject, html) {
-  const transporter = await createTransporter();
-  return transporter.sendMail({
-    from: getFromAddress(),
-    to,
-    subject,
-    html
-  });
+  let lastError;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const transporter = await createTransporter();
+      return await transporter.sendMail({
+        from: getFromAddress(),
+        to,
+        subject,
+        html
+      });
+    } catch (err) {
+      lastError = err;
+      console.error(`❌ Mail gönderme hatası (deneme ${attempt + 1}):`, err.message);
+      if (attempt === 0 && isAuthMailError(err)) {
+        resetEmailTransporter();
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError;
 }
 
 function replacePlaceholders(template, vars) {
@@ -326,6 +347,7 @@ async function sendBulkEmail(recipients, subject, messageContent, options = {}) 
 
 module.exports = {
   sendMail,
+  resetEmailTransporter,
   sendEmail,
   sendCustomerRegistrationEmail,
   sendSaleConfirmationEmail,

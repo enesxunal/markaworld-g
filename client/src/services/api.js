@@ -172,6 +172,15 @@ export const adminAPI = {
   // Toplu mail gönder
   sendBulkEmail: (subject, content) => api.post('/admin/send-bulk-email', { subject, content }),
 
+  // Doğrulama maili — bekleyen liste
+  getPendingVerification: () => api.get('/admin/customers/pending-verification'),
+
+  // Doğrulama maili — tek müşteri
+  resendVerification: (customerId) => api.post(`/admin/customers/${customerId}/resend-verification`),
+
+  // Doğrulama maili — tüm bekleyenler
+  resendVerificationBulk: () => api.post('/admin/customers/resend-verification-bulk'),
+
   // Yedekleri listele
   get: (endpoint) => api.get(`/admin${endpoint}`),
 

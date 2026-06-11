@@ -4,6 +4,7 @@ const { db } = require('../database/init');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const emailService = require('../services/emailService');
+const verificationService = require('../services/verificationService');
 const jwt = require('jsonwebtoken');
 const { authenticateAdmin, authenticateCustomer } = require('../middleware/auth');
 const { hoursFromNow } = require('../utils/datetime');
@@ -71,46 +72,24 @@ router.post('/resend-verification', [
   const { email } = req.body;
 
   try {
-    const customer = await new Promise((resolve, reject) => {
-      db.get(
-        `SELECT * FROM customers WHERE email = ? AND status != 'active'`,
-        [email],
-        (err, row) => (err ? reject(err) : resolve(row))
-      );
-    });
+    const result = await verificationService.resendVerificationByEmail(email);
 
-    if (!customer) {
+    if (!result.found) {
       return res.json({
         success: true,
         message: 'Kayıtlı e-posta adresinize doğrulama bağlantısı gönderildi.'
       });
     }
 
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt = hoursFromNow(24);
-
-    await new Promise((resolve, reject) => {
-      db.run(
-        `UPDATE customers SET verification_token = ?, verification_token_expires_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        [verificationToken, expiresAt, customer.id],
-        (err) => (err ? reject(err) : resolve())
-      );
-    });
-
-    await emailService.sendCustomerRegistrationEmail(
-      { id: customer.id, name: customer.name, email: customer.email },
-      verificationToken
-    );
-
     res.json({
       success: true,
       message: 'Doğrulama e-postası tekrar gönderildi. Gelen kutunuzu ve spam klasörünü kontrol edin.'
     });
   } catch (error) {
-    console.error('Doğrulama maili yeniden gönderme hatası:', error);
+    console.error('Doğrulama maili yeniden gönderme hatası:', error.message);
     res.status(500).json({
       success: false,
-      error: 'E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin veya bizimle iletişime geçin.'
+      error: 'E-posta gönderilemedi. Sunucu mail ayarları kontrol edilmeli. Lütfen bir süre sonra tekrar deneyin.'
     });
   }
 });

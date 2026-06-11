@@ -47,9 +47,10 @@ import {
   Phone as PhoneIcon,
   Email as EmailIcon,
   CreditCard as CreditCardIcon,
-  AddShoppingCart as AddShoppingCartIcon
+  AddShoppingCart as AddShoppingCartIcon,
+  Send as SendIcon
 } from '@mui/icons-material';
-import { customerAPI } from '../services/api';
+import { customerAPI, adminAPI } from '../services/api';
 
 function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -61,6 +62,8 @@ function Customers() {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [expandedCard, setExpandedCard] = useState(null);
+  const [verifyBusy, setVerifyBusy] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     tc_no: '',
@@ -180,13 +183,53 @@ function Customers() {
     }
   };
 
-  const getStatusChip = (status) => {
+  const needsVerification = (customer) =>
+    customer.status !== 'active' && !customer.email_verified;
+
+  const pendingVerificationCount = customers.filter(needsVerification).length;
+
+  const handleResendVerification = async (customerId, email) => {
+    if (!window.confirm(`${email} adresine doğrulama maili gönderilsin mi?`)) return;
+    try {
+      setVerifyBusy(true);
+      setVerifyMessage('');
+      const res = await adminAPI.resendVerification(customerId);
+      setVerifyMessage(res.data.message || 'Mail gönderildi');
+    } catch (error) {
+      setVerifyMessage(error.response?.data?.error || 'Mail gönderilemedi');
+    } finally {
+      setVerifyBusy(false);
+    }
+  };
+
+  const handleBulkResendVerification = async () => {
+    if (pendingVerificationCount === 0) {
+      setVerifyMessage('Bekleyen doğrulama yok.');
+      return;
+    }
+    if (!window.confirm(`${pendingVerificationCount} müşteriye doğrulama maili gönderilsin mi?`)) return;
+    try {
+      setVerifyBusy(true);
+      setVerifyMessage('');
+      const res = await adminAPI.resendVerificationBulk();
+      setVerifyMessage(res.data.message || 'İşlem tamamlandı');
+    } catch (error) {
+      setVerifyMessage(error.response?.data?.error || 'Toplu gönderim başarısız');
+    } finally {
+      setVerifyBusy(false);
+    }
+  };
+
+  const getStatusChip = (customer) => {
+    if (needsVerification(customer)) {
+      return <Chip label="E-posta bekliyor" color="warning" size="small" />;
+    }
     const statusMap = {
-      'active': { label: 'Aktif', color: 'success' },
-      'passive': { label: 'Pasif', color: 'default' },
+      active: { label: 'Aktif', color: 'success' },
+      passive: { label: 'Pasif', color: 'default' },
+      pending: { label: 'Beklemede', color: 'warning' }
     };
-    
-    const statusInfo = statusMap[status] || { label: status, color: 'default' };
+    const statusInfo = statusMap[customer.status] || { label: customer.status, color: 'default' };
     return <Chip label={statusInfo.label} color={statusInfo.color} size="small" />;
   };
 
@@ -233,6 +276,17 @@ function Customers() {
             >
               <AddShoppingCartIcon />
             </IconButton>
+            {needsVerification(customer) && (
+              <IconButton
+                size="small"
+                color="warning"
+                disabled={verifyBusy}
+                title="Doğrulama maili gönder"
+                onClick={() => handleResendVerification(customer.id, customer.email)}
+              >
+                <SendIcon />
+              </IconButton>
+            )}
           </Box>
         </Box>
       </CardContent>
@@ -272,13 +326,7 @@ function Customers() {
                     </Typography>
                   </Box>
                 </TableCell>
-                <TableCell>
-                  <Chip
-                    label={customer.status === 'active' ? 'Aktif' : 'Pasif'}
-                    color={customer.status === 'active' ? 'success' : 'default'}
-                    size="small"
-                  />
-                </TableCell>
+                <TableCell>{getStatusChip(customer)}</TableCell>
                 <TableCell>
                   <IconButton
                     size="small"
@@ -292,6 +340,17 @@ function Customers() {
                   >
                     <AddShoppingCartIcon />
                   </IconButton>
+                  {needsVerification(customer) && (
+                    <IconButton
+                      size="small"
+                      color="warning"
+                      disabled={verifyBusy}
+                      title="Doğrulama maili gönder"
+                      onClick={() => handleResendVerification(customer.id, customer.email)}
+                    >
+                      <SendIcon />
+                    </IconButton>
+                  )}
                 </TableCell>
               </TableRow>
             ))
@@ -330,19 +389,44 @@ function Customers() {
         <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 'bold' }}>
           Müşteriler ({filteredCustomers.length})
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-          size={isMobile ? "medium" : "large"}
-          sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}
-        >
-          Yeni Müşteri
-        </Button>
+        <Stack direction={isMobile ? 'column' : 'row'} spacing={1}>
+          {pendingVerificationCount > 0 && (
+            <Button
+              variant="outlined"
+              color="warning"
+              startIcon={<SendIcon />}
+              disabled={verifyBusy}
+              onClick={handleBulkResendVerification}
+              size={isMobile ? 'medium' : 'large'}
+              sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}
+            >
+              Doğrulama Maili ({pendingVerificationCount})
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+            size={isMobile ? "medium" : "large"}
+            sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}
+          >
+            Yeni Müşteri
+          </Button>
+        </Stack>
       </Stack>
 
       {loadError && (
         <Alert severity="warning" sx={{ mb: 2 }}>{loadError}</Alert>
+      )}
+
+      {verifyMessage && (
+        <Alert
+          severity={verifyMessage.toLowerCase().includes('başarısız') || verifyMessage.toLowerCase().includes('gönderilemedi') ? 'error' : 'success'}
+          sx={{ mb: 2 }}
+          onClose={() => setVerifyMessage('')}
+        >
+          {verifyMessage}
+        </Alert>
       )}
 
       {/* Arama ve Filtreleme */}

@@ -13,9 +13,11 @@ if (!to) {
   process.exit(1);
 }
 
+console.log('Gmail OAuth:', process.env.GMAIL_USER || '(yok)');
+console.log('GMAIL_REFRESH_TOKEN:', process.env.GMAIL_REFRESH_TOKEN ? '*** tanımlı' : '(YOK)');
 console.log('SMTP host:', process.env.EMAIL_HOST || '(yok)');
 console.log('SMTP user:', process.env.EMAIL_USER || '(yok)');
-console.log('SMTP pass:', process.env.EMAIL_PASS ? '*** tanımlı' : '(YOK — mail gitmez)');
+console.log('EMAIL_FROM:', process.env.EMAIL_FROM || '(yok)');
 
 emailService
   .sendMail(to, 'Marka World SMTP Test', '<p>Bu bir test e-postasıdır. SMTP çalışıyor.</p>')

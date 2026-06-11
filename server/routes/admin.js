@@ -6,6 +6,7 @@ const { authenticateAdmin } = require('../middleware/auth');
 const { db } = require('../database/init');
 const backupService = require('../services/backupService');
 const emailService = require('../services/emailService');
+const verificationService = require('../services/verificationService');
 const path = require('path');
 
 function getAdminCredentials() {
@@ -191,6 +192,50 @@ router.get('/customers/emails', authenticateAdmin, (req, res) => {
       }))
     });
   });
+});
+
+// Bekleyen doğrulama mailleri — liste
+router.get('/customers/pending-verification', authenticateAdmin, async (req, res) => {
+  try {
+    const list = await verificationService.listPendingVerification();
+    res.json({ success: true, count: list.length, customers: list });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Liste alınamadı' });
+  }
+});
+
+// Tek müşteriye doğrulama maili
+router.post('/customers/:id/resend-verification', authenticateAdmin, async (req, res) => {
+  try {
+    const result = await verificationService.resendVerificationById(req.params.id);
+    if (!result.found) {
+      return res.status(404).json({ success: false, error: 'Bekleyen müşteri bulunamadı veya zaten aktif' });
+    }
+    res.json({ success: true, message: `Doğrulama maili gönderildi: ${result.email}` });
+  } catch (error) {
+    console.error('Admin doğrulama maili hatası:', error.message);
+    res.status(500).json({ success: false, error: `Mail gönderilemedi: ${error.message}` });
+  }
+});
+
+// Tüm bekleyenlere doğrulama maili
+router.post('/customers/resend-verification-bulk', authenticateAdmin, async (req, res) => {
+  try {
+    const results = await verificationService.resendAllPendingVerifications({ delayMs: 450 });
+    const msg =
+      results.failed === 0
+        ? `${results.sent} doğrulama maili gönderildi`
+        : `${results.sent} gönderildi, ${results.failed} başarısız`;
+
+    res.json({
+      success: results.sent > 0 || results.total === 0,
+      message: msg,
+      ...results
+    });
+  } catch (error) {
+    console.error('Toplu doğrulama maili hatası:', error.message);
+    res.status(500).json({ success: false, error: `Mail gönderilemedi: ${error.message}` });
+  }
 });
 
 // Toplu mail gönder
