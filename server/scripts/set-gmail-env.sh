@@ -7,10 +7,25 @@ set -euo pipefail
 
 ENV_FILE="$(dirname "$0")/../.env"
 TOKEN="${1:-}"
-USER_EMAIL="${2:-enesunal700@gmail.com}"
+USER_EMAIL="${2:-info@markaworld.com.tr}"
+
+# Satır sonu / boşluk temizle (yanlış yapıştırma invalid_grant yapar)
+TOKEN="$(printf '%s' "$TOKEN" | tr -d '\n\r' | sed 's/[[:space:]]*$//')"
 
 if [[ -z "$TOKEN" ]]; then
   echo "Kullanım: bash scripts/set-gmail-env.sh \"REFRESH_TOKEN\" \"gmail@adres.com\""
+  exit 1
+fi
+
+if [[ "$TOKEN" == 4/* ]]; then
+  echo "HATA: Bu Google'ın KISA yetkilendirme kodu (4/ ile başlar)."
+  echo "Önce: node get_gmail_token.js — kısa kodu oraya yapıştırın."
+  echo "Script size 1// ile başlayan uzun Refresh Token verecek."
+  exit 1
+fi
+
+if [[ ${#TOKEN} -lt 80 ]]; then
+  echo "HATA: Refresh Token çok kısa (${#TOKEN} karakter). 1// ile başlayan uzun token olmalı."
   exit 1
 fi
 

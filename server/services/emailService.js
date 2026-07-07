@@ -4,12 +4,17 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const { db } = require('../database/init');
 
+function envTrim(key) {
+  const value = process.env[key];
+  return value == null ? '' : String(value).trim();
+}
+
 function getFrontendUrl() {
   return (process.env.FRONTEND_URL || 'https://markaworld.com.tr').replace(/\/$/, '');
 }
 
 function getFromAddress() {
-  return process.env.EMAIL_FROM || process.env.EMAIL_USER || process.env.GMAIL_USER || 'info@markaworld.com.tr';
+  return envTrim('EMAIL_FROM') || envTrim('EMAIL_USER') || envTrim('GMAIL_USER') || 'info@markaworld.com.tr';
 }
 
 let cachedSmtpTransporter = null;
@@ -20,10 +25,10 @@ function resetEmailTransporter() {
 
 function hasGmailOAuth() {
   return Boolean(
-    process.env.GMAIL_CLIENT_ID &&
-    process.env.GMAIL_CLIENT_SECRET &&
-    process.env.GMAIL_REFRESH_TOKEN &&
-    process.env.GMAIL_USER
+    envTrim('GMAIL_CLIENT_ID') &&
+    envTrim('GMAIL_CLIENT_SECRET') &&
+    envTrim('GMAIL_REFRESH_TOKEN') &&
+    envTrim('GMAIL_USER')
   );
 }
 
@@ -41,25 +46,34 @@ function isPlaceholderSecret(value) {
 
 function hasSmtpConfig() {
   return Boolean(
-    process.env.EMAIL_HOST &&
-    process.env.EMAIL_USER &&
-    process.env.EMAIL_PASS &&
-    !isPlaceholderSecret(process.env.EMAIL_PASS)
+    envTrim('EMAIL_HOST') &&
+    envTrim('EMAIL_USER') &&
+    envTrim('EMAIL_PASS') &&
+    !isPlaceholderSecret(envTrim('EMAIL_PASS'))
   );
 }
 
+function getEmailDriver() {
+  const driver = envTrim('EMAIL_DRIVER').toLowerCase();
+  if (driver === 'smtp' || driver === 'gmail') return driver;
+  // auto: SMTP daha stabil (Gmail OAuth test modunda 7 günde düşebilir)
+  if (hasSmtpConfig()) return 'smtp';
+  if (hasGmailOAuth()) return 'gmail';
+  return null;
+}
+
 function getGmailRedirectUri() {
-  return process.env.GMAIL_REDIRECT_URI || 'urn:ietf:wg:oauth:2.0:oob';
+  return envTrim('GMAIL_REDIRECT_URI') || 'urn:ietf:wg:oauth:2.0:oob';
 }
 
 async function createGmailTransporter() {
   const { google } = require('googleapis');
   const oAuth2Client = new google.auth.OAuth2(
-    process.env.GMAIL_CLIENT_ID,
-    process.env.GMAIL_CLIENT_SECRET,
+    envTrim('GMAIL_CLIENT_ID'),
+    envTrim('GMAIL_CLIENT_SECRET'),
     getGmailRedirectUri()
   );
-  oAuth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
+  oAuth2Client.setCredentials({ refresh_token: envTrim('GMAIL_REFRESH_TOKEN') });
 
   const accessToken = await oAuth2Client.getAccessToken();
 
@@ -67,52 +81,59 @@ async function createGmailTransporter() {
     service: 'gmail',
     auth: {
       type: 'OAuth2',
-      user: process.env.GMAIL_USER,
-      clientId: process.env.GMAIL_CLIENT_ID,
-      clientSecret: process.env.GMAIL_CLIENT_SECRET,
-      refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+      user: envTrim('GMAIL_USER'),
+      clientId: envTrim('GMAIL_CLIENT_ID'),
+      clientSecret: envTrim('GMAIL_CLIENT_SECRET'),
+      refreshToken: envTrim('GMAIL_REFRESH_TOKEN'),
       accessToken: accessToken.token
     }
   });
 }
 
-async function createTransporter() {
-  // Gmail: her seferinde yeni access token (cache yüzünden mail gitmeme sorununu önler)
-  if (hasGmailOAuth()) {
+async function createSmtpTransporter() {
+  const transporter = nodemailer.createTransport({
+    host: envTrim('EMAIL_HOST'),
+    port: parseInt(envTrim('EMAIL_PORT') || '465', 10),
+    secure: envTrim('EMAIL_SECURE') === 'true',
+    auth: {
+      user: envTrim('EMAIL_USER'),
+      pass: envTrim('EMAIL_PASS')
+    }
+  });
+  await transporter.verify();
+  console.log('✅ E-posta: SMTP hazır (%s)', envTrim('EMAIL_HOST'));
+  return transporter;
+}
+
+async function createTransporter({ prefer } = {}) {
+  const driver = prefer || getEmailDriver();
+  const tryOrder =
+    driver === 'smtp'
+      ? ['smtp', 'gmail']
+      : driver === 'gmail'
+        ? ['gmail', 'smtp']
+        : [];
+
+  let lastError;
+  for (const mode of tryOrder) {
     try {
-      const transporter = await createGmailTransporter();
-      console.log('✅ E-posta: Gmail OAuth hazır (%s)', process.env.GMAIL_USER);
-      return transporter;
-    } catch (err) {
-      console.error('❌ Gmail OAuth hatası:', err.message);
-      if (!hasSmtpConfig()) throw err;
-      console.log('↪ SMTP ile deneniyor...');
-    }
-  }
-
-  if (hasSmtpConfig()) {
-    if (!cachedSmtpTransporter) {
-      cachedSmtpTransporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST,
-        port: parseInt(process.env.EMAIL_PORT || '465', 10),
-        secure: process.env.EMAIL_SECURE !== 'false',
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS
-        }
-      });
-      try {
-        await cachedSmtpTransporter.verify();
-        console.log('✅ E-posta: SMTP hazır (%s)', process.env.EMAIL_HOST);
-      } catch (err) {
-        console.warn('⚠️ SMTP verify uyarısı:', err.message);
+      if (mode === 'smtp' && hasSmtpConfig()) {
+        return await createSmtpTransporter();
       }
+      if (mode === 'gmail' && hasGmailOAuth()) {
+        const transporter = await createGmailTransporter();
+        console.log('✅ E-posta: Gmail OAuth hazır (%s)', envTrim('GMAIL_USER'));
+        return transporter;
+      }
+    } catch (err) {
+      lastError = err;
+      console.error(`❌ ${mode.toUpperCase()} hatası:`, err.message);
     }
-    return cachedSmtpTransporter;
   }
 
+  if (lastError) throw lastError;
   throw new Error(
-    'E-posta yapılandırması eksik. server/.env içinde EMAIL_HOST, EMAIL_USER, EMAIL_PASS veya GMAIL_* tanımlayın.'
+    'E-posta yapılandırması eksik. server/.env içinde EMAIL_HOST/USER/PASS veya GMAIL_* tanımlayın.'
   );
 }
 
@@ -123,9 +144,15 @@ function isAuthMailError(err) {
 
 async function sendMail(to, subject, html) {
   let lastError;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  const drivers = [];
+  const primary = getEmailDriver();
+  if (primary === 'smtp') drivers.push('smtp', 'gmail');
+  else if (primary === 'gmail') drivers.push('gmail', 'smtp');
+  else drivers.push('gmail', 'smtp');
+
+  for (const driver of drivers) {
     try {
-      const transporter = await createTransporter();
+      const transporter = await createTransporter({ prefer: driver });
       return await transporter.sendMail({
         from: getFromAddress(),
         to,
@@ -134,15 +161,16 @@ async function sendMail(to, subject, html) {
       });
     } catch (err) {
       lastError = err;
-      console.error(`❌ Mail gönderme hatası (deneme ${attempt + 1}):`, err.message);
-      if (attempt === 0 && isAuthMailError(err)) {
-        resetEmailTransporter();
-        continue;
-      }
-      throw err;
+      console.error(`❌ Mail gönderme hatası (${driver}):`, err.message);
+      resetEmailTransporter();
+      if (!isAuthMailError(err)) break;
     }
   }
-  throw lastError;
+
+  const hint = /invalid_grant/i.test((lastError && lastError.message) || '')
+    ? ' Gmail token süresi dolmuş. Sunucuda: node get_gmail_token.js veya bash scripts/set-smtp-env.sh ile hosting mail kurun.'
+    : '';
+  throw new Error(`${(lastError && lastError.message) || 'Mail gönderilemedi'}.${hint}`);
 }
 
 function replacePlaceholders(template, vars) {
