@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Sunucuda çalıştırın: bash /var/www/markaworld/scripts/deploy-on-server.sh
+# Varsayılan admin şifresi YAZMAZ. ADMIN_PASSWORD_HASH yoksa fail-fast.
 set -euo pipefail
 
 ROOT="${MARKAWORLD_ROOT:-/var/www/markaworld}"
@@ -16,11 +17,24 @@ git log -1 --oneline
 
 ENV="$ROOT/server/.env"
 if [ ! -f "$ENV" ]; then
-  cp "$ROOT/server/env.example" "$ENV"
+  echo "HATA: $ENV yok."
+  echo "server/env.example dosyasını kopyalayıp JWT_SECRET ve ADMIN_PASSWORD_HASH ayarlayın."
+  echo "Hash üretmek için: bash scripts/reset-admin-password.sh \"GucluSifreniz\""
+  exit 1
 fi
-grep -q '^JWT_SECRET=' "$ENV" 2>/dev/null || echo "JWT_SECRET=markaworld-jwt-$(openssl rand -hex 16)" >> "$ENV"
+
+if ! grep -qE '^ADMIN_PASSWORD_HASH=\$.+' "$ENV" 2>/dev/null; then
+  echo "HATA: ADMIN_PASSWORD_HASH tanımlı değil veya geçersiz."
+  echo "Düzeltme: bash scripts/reset-admin-password.sh \"GucluSifreniz\""
+  exit 1
+fi
+
+if ! grep -qE '^JWT_SECRET=.+' "$ENV" 2>/dev/null; then
+  echo "HATA: JWT_SECRET tanımlı değil."
+  exit 1
+fi
+
 grep -q '^ADMIN_USERNAME=' "$ENV" 2>/dev/null || echo 'ADMIN_USERNAME=markaworld' >> "$ENV"
-grep -q '^ADMIN_PASSWORD=' "$ENV" 2>/dev/null || echo 'ADMIN_PASSWORD=Marka60..' >> "$ENV"
 grep -q '^FRONTEND_URL=' "$ENV" 2>/dev/null || echo 'FRONTEND_URL=https://markaworld.com.tr' >> "$ENV"
 grep -q '^NODE_ENV=' "$ENV" 2>/dev/null || echo 'NODE_ENV=production' >> "$ENV"
 grep -q '^PORT=' "$ENV" 2>/dev/null || echo 'PORT=5000' >> "$ENV"

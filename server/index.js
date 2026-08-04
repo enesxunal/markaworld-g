@@ -2,6 +2,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 
 // Veritabanı ve servisler
 const { initDatabase, insertDefaultData, insertDefaultEmailTemplates } = require('./database/init');
@@ -17,6 +18,25 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const debug = process.env.NODE_ENV !== 'production';
+
+// nginx / reverse proxy arkasında doğru client IP (rate limit)
+app.set('trust proxy', 1);
+
+app.disable('x-powered-by');
+
+app.use(
+  helmet({
+    // API yanıtları; HTML CSP nginx/static tarafında ayrıca ele alınmalı
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts:
+      process.env.NODE_ENV === 'production'
+        ? { maxAge: 15552000, includeSubDomains: true }
+        : false
+  })
+);
 
 // Middleware
 const allowedOrigins = [
@@ -39,19 +59,39 @@ app.use(cors({
 
 app.use(express.json());
 
-// Debug middleware - tüm istekleri logla
+// Debug middleware — production kapalı; body'de hassas alan basılmaz
 if (debug) {
+  const SENSITIVE_KEYS = new Set([
+    'password',
+    'token',
+    'authorization',
+    'verificationToken',
+    'verification_token',
+    'tc_no',
+    'refresh_token',
+    'adminPassword'
+  ]);
+
+  function scrub(value) {
+    if (!value || typeof value !== 'object') return value;
+    const out = Array.isArray(value) ? [] : {};
+    for (const [k, v] of Object.entries(value)) {
+      if (SENSITIVE_KEYS.has(k) || /password|token|secret|authorization/i.test(k)) {
+        out[k] = '[redacted]';
+      } else if (v && typeof v === 'object') {
+        out[k] = scrub(v);
+      } else {
+        out[k] = v;
+      }
+    }
+    return out;
+  }
+
   app.use((req, res, next) => {
-    console.log(`🔍 ${req.method} ${req.path}`);
-    console.log('📦 Request body:', req.body);
-    
-    // Response'u yakala
-    const oldSend = res.send;
-    res.send = function(data) {
-      console.log('📬 Response:', data);
-      oldSend.apply(res, arguments);
-    };
-    
+    console.log(`${req.method} ${req.path}`);
+    if (req.body && Object.keys(req.body).length) {
+      console.log('Request body (scrubbed):', scrub(req.body));
+    }
     next();
   });
 }

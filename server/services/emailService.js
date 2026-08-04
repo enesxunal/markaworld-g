@@ -91,6 +91,9 @@ async function createGmailTransporter() {
 }
 
 async function createSmtpTransporter() {
+  if (cachedSmtpTransporter) {
+    return cachedSmtpTransporter;
+  }
   const transporter = nodemailer.createTransport({
     host: envTrim('EMAIL_HOST'),
     port: parseInt(envTrim('EMAIL_PORT') || '465', 10),
@@ -101,6 +104,7 @@ async function createSmtpTransporter() {
     }
   });
   await transporter.verify();
+  cachedSmtpTransporter = transporter;
   console.log('✅ E-posta: SMTP hazır (%s)', envTrim('EMAIL_HOST'));
   return transporter;
 }
@@ -127,6 +131,7 @@ async function createTransporter({ prefer } = {}) {
       }
     } catch (err) {
       lastError = err;
+      resetEmailTransporter();
       console.error(`❌ ${mode.toUpperCase()} hatası:`, err.message);
     }
   }
@@ -139,7 +144,12 @@ async function createTransporter({ prefer } = {}) {
 
 function isAuthMailError(err) {
   const msg = (err && err.message) || '';
-  return /invalid_grant|EAUTH|authentication|unauthorized|expired/i.test(msg);
+  return /invalid_grant|EAUTH|authentication|unauthorized|expired|Invalid login/i.test(msg);
+}
+
+function isRateLimitError(err) {
+  const msg = (err && err.message) || '';
+  return /454|Too many login attempts|rate.?limit|try again later/i.test(msg);
 }
 
 async function sendMail(to, subject, html) {
@@ -162,6 +172,15 @@ async function sendMail(to, subject, html) {
     } catch (err) {
       lastError = err;
       console.error(`❌ Mail gönderme hatası (${driver}):`, err.message);
+
+      // Google rate limit: tekrar denemek durumu kötüleştirir
+      if (isRateLimitError(err)) {
+        throw new Error(
+          'Google geçici olarak mail gönderimini kısıtladı (çok fazla giriş denemesi). ' +
+            '30–60 dakika bekleyip tekrar deneyin.'
+        );
+      }
+
       resetEmailTransporter();
       if (!isAuthMailError(err)) break;
     }
@@ -363,7 +382,7 @@ async function sendBulkEmail(recipients, subject, messageContent, options = {}) 
       const html = buildBulkHtml(messageContent, email, options);
       await sendMail(email, subject, html);
       totalSent += 1;
-      await sleep(350);
+      await sleep(800);
     } catch (err) {
       totalFailed += 1;
       errors.push({ email, error: err.message });

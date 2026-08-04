@@ -47,10 +47,6 @@ router.get('/', auth.authenticateAdmin, (req, res) => {
 
 // Gelecek ödemeleri getir
 router.get('/future-payments', auth.authenticateAdmin, async (req, res) => {
-  console.log('🔍 [BACKEND] /future-payments endpoint çağrıldı');
-  console.log('🔍 [BACKEND] Query parametreleri:', req.query);
-  console.log('🔍 [BACKEND] Headers:', req.headers);
-  
   try {
     const { startDate, endDate, status } = req.query;
 

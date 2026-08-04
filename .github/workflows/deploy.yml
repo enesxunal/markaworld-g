@@ -1,0 +1,57 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+            echo "=== DB yedek ==="
+            cp /var/www/markaworld/server/database/database.sqlite \
+              "/var/www/markaworld/server/database/database.sqlite.backup-$(date +%Y%m%d-%H%M)" || true
+
+            cd /var/www/markaworld
+            git fetch origin main
+            git reset --hard origin/main
+            git log -1 --oneline
+
+            ENV=/var/www/markaworld/server/.env
+            if [ ! -f "$ENV" ]; then
+              echo "HATA: server/.env yok. ADMIN_PASSWORD_HASH ve JWT_SECRET ayarlanmalı."
+              exit 1
+            fi
+            if ! grep -qE '^ADMIN_PASSWORD_HASH=\$.+' "$ENV"; then
+              echo "HATA: ADMIN_PASSWORD_HASH eksik. scripts/reset-admin-password.sh kullanın."
+              exit 1
+            fi
+            if ! grep -qE '^JWT_SECRET=.+' "$ENV"; then
+              echo "HATA: JWT_SECRET eksik."
+              exit 1
+            fi
+            grep -q '^ADMIN_USERNAME=' "$ENV" || echo 'ADMIN_USERNAME=markaworld' >> "$ENV"
+            grep -q '^FRONTEND_URL=' "$ENV" || echo 'FRONTEND_URL=https://markaworld.com.tr' >> "$ENV"
+            grep -q '^NODE_ENV=' "$ENV" || echo 'NODE_ENV=production' >> "$ENV"
+            grep -q '^PORT=' "$ENV" || echo 'PORT=5000' >> "$ENV"
+
+            cd server && npm install --omit=dev
+            pm2 restart markaworld-backend
+            sleep 2
+
+            cd ../client && npm install && CI=false npm run build
+            cp -r build/* /var/www/html/
+
+            curl -sf http://127.0.0.1:5000/api/health
+            echo "Deploy OK"

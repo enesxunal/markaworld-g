@@ -41,8 +41,22 @@ function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/customer-login" element={<CustomerLogin />} />
+            <Route
+              path="/admin/login"
+              element={
+                <ProtectedRoute isAdmin>
+                  <AdminLogin />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/customer-login"
+              element={
+                <ProtectedRoute>
+                  <CustomerLogin />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/customer-register" element={<CustomerRegister />} />
             <Route path="/verify-email/:token" element={<EmailVerification />} />
             <Route path="/contract-approve/:token" element={<EmailVerification />} />

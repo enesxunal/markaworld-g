@@ -4,6 +4,7 @@ const xml2js = require('xml2js');
 const { promisify } = require('util');
 const zlib = require('zlib');
 const { db } = require('../database/init');
+const { resolveSafeBackupPath, isInvalidBackupNameError } = require('../utils/backupPath');
 
 const BACKUP_DIR = path.join(__dirname, '..', 'backups');
 const MAX_BACKUPS = 30; // 30 gün yedek tutma
@@ -148,7 +149,7 @@ async function getBackups() {
 // Yedeği geri yükle
 async function restoreBackup(filename) {
   try {
-    const filepath = path.join(BACKUP_DIR, filename);
+    const filepath = resolveSafeBackupPath(filename, BACKUP_DIR);
     const compressed = await promisify(fs.readFile)(filepath);
     const xml = await promisify(zlib.gunzip)(compressed);
     const parser = new xml2js.Parser({ explicitArray: false });
@@ -202,25 +203,34 @@ async function restoreBackup(filename) {
 
     return { success: true };
   } catch (error) {
-    console.error('Geri yükleme hatası:', error);
-    return { success: false, error: error.message };
+    if (isInvalidBackupNameError(error)) {
+      return { success: false, error: 'Geçersiz yedek dosya adı', statusCode: 400 };
+    }
+    console.error('Geri yükleme hatası:', error.message);
+    return { success: false, error: 'Yedek geri yüklenemedi' };
   }
 }
 
 // Yedeği sil
 async function deleteBackup(filename) {
   try {
-    await promisify(fs.unlink)(path.join(BACKUP_DIR, filename));
+    const filepath = resolveSafeBackupPath(filename, BACKUP_DIR);
+    await promisify(fs.unlink)(filepath);
     return { success: true };
   } catch (error) {
-    console.error('Yedek silme hatası:', error);
-    return { success: false, error: error.message };
+    if (isInvalidBackupNameError(error)) {
+      return { success: false, error: 'Geçersiz yedek dosya adı', statusCode: 400 };
+    }
+    console.error('Yedek silme hatası:', error.message);
+    return { success: false, error: 'Yedek silinemedi' };
   }
 }
 
 module.exports = {
+  BACKUP_DIR,
   createBackup,
   getBackups,
   restoreBackup,
-  deleteBackup
+  deleteBackup,
+  resolveSafeBackupPath: (filename) => resolveSafeBackupPath(filename, BACKUP_DIR)
 }; 

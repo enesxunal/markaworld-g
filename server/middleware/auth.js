@@ -1,20 +1,15 @@
 const jwt = require('jsonwebtoken');
 const db = require('../database/init');
+const { debugLog } = require('../utils/safeLog');
 
 // Admin authentication middleware
 const authenticateAdmin = (req, res, next) => {
   try {
-    console.log('🔍 [AUTH] Admin authentication başladı');
-    console.log('🔍 [AUTH] Request path:', req.path);
-    console.log('🔍 [AUTH] Request method:', req.method);
-    console.log('🔍 [AUTH] All headers:', req.headers);
-    console.log('🔍 [AUTH] Authorization header:', req.header('Authorization'));
+    debugLog('[AUTH] Admin auth', { method: req.method, path: req.path });
 
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    console.log('🔍 [AUTH] Extracted token:', token ? 'Token mevcut' : 'Token bulunamadı');
-    
+
     if (!token) {
-      console.log('🔍 [AUTH] HATA: Token bulunamadı');
       return res.status(401).json({
         success: false,
         error: 'Erişim token\'ı bulunamadı'
@@ -27,35 +22,22 @@ const authenticateAdmin = (req, res, next) => {
       return res.status(503).json({ success: false, error: 'Sunucu yapılandırması eksik' });
     }
     const decoded = jwt.verify(token, jwtSecret);
-    console.log('🔍 [AUTH] Token çözümlendi:', {
-      username: decoded.username,
-      role: decoded.role,
-      loginTime: decoded.loginTime
-    });
-    
+
     if (!decoded || !decoded.username || decoded.role !== 'admin') {
-      console.log('🔍 [AUTH] HATA: Admin yetkisi yok', {
-        decoded: decoded,
-        hasUsername: !!decoded?.username,
-        role: decoded?.role
-      });
       return res.status(403).json({
         success: false,
         error: 'Bu işlem için admin yetkisi gerekli'
       });
     }
 
-    // Admin bilgilerini token'dan al
     req.admin = {
       username: decoded.username,
       role: decoded.role,
       loginTime: decoded.loginTime
     };
-    console.log('🔍 [AUTH] Başarılı admin authentication:', req.admin);
     next();
-
   } catch (error) {
-    console.error('🔍 [AUTH] JWT Hata:', error);
+    console.error('[AUTH] JWT doğrulama başarısız:', error.name);
     res.status(401).json({
       success: false,
       error: 'Geçersiz veya süresi dolmuş token'
@@ -63,11 +45,11 @@ const authenticateAdmin = (req, res, next) => {
   }
 };
 
-// Müşteri authentication middleware (mevcut)
+// Müşteri authentication middleware
 const authenticateCustomer = (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -100,4 +82,4 @@ const authenticateCustomer = (req, res, next) => {
 module.exports = {
   authenticateAdmin,
   authenticateCustomer
-}; 
+};

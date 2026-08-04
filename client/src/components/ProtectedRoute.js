@@ -1,36 +1,82 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 
-const ProtectedRoute = ({ children, isAdmin }) => {
-  const location = useLocation();
-  const adminToken = localStorage.getItem('adminToken');
-  const customer = localStorage.getItem('customer');
-  const isAdminRoute = isAdmin || location.pathname.startsWith('/admin');
-  const isCustomerRoute = !isAdminRoute && location.pathname !== '/';
-  
-  // Admin rotası için admin token kontrolü
-  if (isAdminRoute && !adminToken) {
-    console.log('Admin token yok, login sayfasına yönlendiriliyor');
-    return <Navigate to="/admin/login" state={{ from: location }} replace />;
+export function clearCustomerSession() {
+  localStorage.removeItem('customer');
+  localStorage.removeItem('customerToken');
+}
+
+export function clearAdminSession() {
+  localStorage.removeItem('adminToken');
+}
+
+/**
+ * Geçerli müşteri oturumu: hem customerToken hem parse edilebilir customer objesi gerekir.
+ * Bozuk JSON veya eksik parça varsa localStorage temizlenir.
+ */
+export function getValidCustomerSession() {
+  const token = localStorage.getItem('customerToken');
+  const raw = localStorage.getItem('customer');
+
+  if (!token || !raw) {
+    if (token || raw) {
+      clearCustomerSession();
+    }
+    return null;
   }
 
-  // Müşteri rotası için müşteri kontrolü
-  if (isCustomerRoute && !customer) {
+  try {
+    const customer = JSON.parse(raw);
+    if (!customer || typeof customer !== 'object') {
+      clearCustomerSession();
+      return null;
+    }
+    return customer;
+  } catch {
+    clearCustomerSession();
+    return null;
+  }
+}
+
+export function hasAdminSession() {
+  const token = localStorage.getItem('adminToken');
+  return Boolean(token && String(token).trim());
+}
+
+const ProtectedRoute = ({ children, isAdmin }) => {
+  const location = useLocation();
+  const isAdminRoute = isAdmin || location.pathname.startsWith('/admin');
+  const adminOk = hasAdminSession();
+  const customer = getValidCustomerSession();
+
+  // Admin rotası: yalnızca admin token
+  if (isAdminRoute) {
+    if (location.pathname === '/admin/login') {
+      if (adminOk) {
+        return <Navigate to="/admin/dashboard" replace />;
+      }
+      return children;
+    }
+    if (!adminOk) {
+      return <Navigate to="/admin/login" state={{ from: location }} replace />;
+    }
+    return children;
+  }
+
+  // Müşteri login sayfası: geçerli oturum varsa profile
+  if (location.pathname === '/customer-login') {
+    if (customer) {
+      return <Navigate to="/customer/profile" replace />;
+    }
+    return children;
+  }
+
+  // Korumalı müşteri rotaları
+  if (!customer) {
     return <Navigate to="/customer-login" state={{ from: location }} replace />;
   }
 
-  // Admin token varsa ve login sayfasındaysa dashboard'a yönlendir
-  if (adminToken && location.pathname === '/admin/login') {
-    return <Navigate to="/admin/dashboard" replace />;
-  }
-
-  // Müşteri varsa ve login sayfasındaysa satış detay sayfasına yönlendir
-  if (customer && location.pathname === '/customer-login') {
-    const customerData = JSON.parse(customer);
-    return <Navigate to={`/sale/${customerData.sales[0]?.id || 1}`} replace />;
-  }
-  
   return children;
 };
 
-export default ProtectedRoute; 
+export default ProtectedRoute;

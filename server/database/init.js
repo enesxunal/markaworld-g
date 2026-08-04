@@ -127,7 +127,6 @@ const initDatabase = () => {
       `);
 
       // Email logs tablosu
-      db.run(`DROP TABLE IF EXISTS email_logs`);
       db.run(`CREATE TABLE IF NOT EXISTS email_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         to_address TEXT NOT NULL,
@@ -138,8 +137,7 @@ const initDatabase = () => {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
 
-      // Email templates tablosu
-      db.run(`DROP TABLE IF EXISTS email_templates`);
+      // Email templates tablosu — restart'ta DROP yok; mevcut şablonlar korunur
       db.run(`CREATE TABLE IF NOT EXISTS email_templates (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
@@ -346,10 +344,10 @@ const insertDefaultData = () => {
       }
     ];
 
-    // Email şablonlarını ekle
+    // Email şablonlarını ekle (mevcut özelleştirilmiş kayıtların üzerine yazma)
     emailTemplates.forEach(template => {
       db.run(`
-        INSERT OR REPLACE INTO email_templates (name, subject, html)
+        INSERT OR IGNORE INTO email_templates (name, subject, html)
         VALUES (?, ?, ?)
       `, [template.name, template.subject, template.html], (err) => {
         if (err) {

@@ -209,14 +209,18 @@ const BulkEmail = () => {
       setLoading(true);
       setResult(null);
 
-      const response = await adminAPI.post('/send-bulk-email', {
-        recipients: allRecipients,
-        subject: subject.trim(),
-        messageContent: activeContent,
-        useFullHtml,
-        useWrapper: useFullHtml ? false : useWrapper,
-        appendUnsubscribe
-      });
+      const response = await adminAPI.post(
+        '/send-bulk-email',
+        {
+          recipients: allRecipients,
+          subject: subject.trim(),
+          messageContent: activeContent,
+          useFullHtml,
+          useWrapper: useFullHtml ? false : useWrapper,
+          appendUnsubscribe
+        },
+        { timeout: 5 * 60 * 1000 }
+      );
 
       if (response.data.success) {
         let msg = response.data.message;

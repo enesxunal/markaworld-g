@@ -76,7 +76,7 @@ async function resendVerificationById(customerId) {
   return { found: true, sent: true, email: customer.email };
 }
 
-async function resendAllPendingVerifications({ delayMs = 400 } = {}) {
+async function resendAllPendingVerifications({ delayMs = 800 } = {}) {
   const customers = await listPendingVerification();
   const results = { total: customers.length, sent: 0, failed: 0, errors: [] };
 

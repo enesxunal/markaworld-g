@@ -229,12 +229,8 @@ router.post('/register', [
   body('birth_date').optional().isDate().withMessage('Geçerli doğum tarihi girin'),
   body('address').optional()
 ], async (req, res) => {
-  console.log('🔥 Register endpoint çağrıldı!');
-  console.log('📝 Request body:', req.body);
-  
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.log('❌ Validation hatası:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
 
@@ -242,11 +238,10 @@ router.post('/register', [
 
   try {
     // Email kontrolü
-    console.log('🔍 Email kontrolü yapılıyor:', email);
     const existingCustomer = await new Promise((resolve, reject) => {
       db.get('SELECT * FROM customers WHERE email = ?', [email], (err, row) => {
         if (err) {
-          console.error('❌ Email kontrolü hatası:', err);
+          console.error('Email kontrolü hatası:', err.message);
           reject(err);
         }
         else resolve(row);
@@ -254,7 +249,6 @@ router.post('/register', [
     });
 
     if (existingCustomer) {
-      console.log('❌ Email zaten kayıtlı:', email);
       return res.status(400).json({
         success: false,
         error: 'Bu email adresi zaten kayıtlı'
@@ -262,30 +256,13 @@ router.post('/register', [
     }
 
     // Şifreyi hashle
-    console.log('🔐 Şifre hashleniyor...');
     const hashedPassword = await bcrypt.hash(password, 10);
-    console.log('✅ Şifre hashlendi');
-    
+
     // Onay tokeni oluştur
-    console.log('🎲 Onay tokeni oluşturuluyor...');
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const verificationTokenExpiresAt = hoursFromNow(24);
-    console.log('✅ Onay tokeni oluşturuldu:', {
-      token: verificationToken,
-      expiresAt: verificationTokenExpiresAt
-    });
 
     // Müşteriyi kaydet
-    console.log('💾 Müşteri kaydediliyor:', {
-      name,
-      tc_no,
-      phone,
-      email,
-      birth_date,
-      address,
-      verificationToken,
-      verificationTokenExpiresAt
-    });
     const result = await new Promise((resolve, reject) => {
       db.run(
         `INSERT INTO customers (
@@ -301,7 +278,7 @@ router.post('/register', [
     });
 
     const customerId = result;
-    console.log('✅ Müşteri kaydedildi, ID:', customerId);
+    console.log('Müşteri kaydedildi, id:', customerId);
 
     let emailSent = false;
     let emailErrorMessage = null;
@@ -312,7 +289,7 @@ router.post('/register', [
       );
       emailSent = true;
     } catch (emailError) {
-      console.error('❌ Email gönderme hatası:', emailError.message);
+      console.error('Email gönderme hatası:', emailError.message);
       emailErrorMessage = emailError.message;
     }
 
@@ -327,8 +304,7 @@ router.post('/register', [
     });
 
   } catch (error) {
-    console.error('💥 Kayıt hatası:', error);
-    console.error('💥 Hata detayı:', error.stack);
+    console.error('Kayıt hatası:', error.message);
     res.status(500).json({ error: 'Kayıt sırasında bir hata oluştu' });
   }
 });

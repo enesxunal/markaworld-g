@@ -15,6 +15,9 @@ const api = axios.create({
   }
 });
 
+/** Toplu mail / doğrulama gibi uzun süren istekler */
+const BULK_TIMEOUT_MS = 5 * 60 * 1000;
+
 // Request interceptor — admin ve müşteri token'ları karışmasın
 api.interceptors.request.use(
   (config) => {
@@ -170,7 +173,8 @@ export const adminAPI = {
   getSubscribers: () => api.get('/email/subscribers'),
 
   // Toplu mail gönder
-  sendBulkEmail: (subject, content) => api.post('/admin/send-bulk-email', { subject, content }),
+  sendBulkEmail: (subject, content) =>
+    api.post('/admin/send-bulk-email', { subject, content }, { timeout: BULK_TIMEOUT_MS }),
 
   // Doğrulama maili — bekleyen liste
   getPendingVerification: () => api.get('/admin/customers/pending-verification'),
@@ -179,16 +183,15 @@ export const adminAPI = {
   resendVerification: (customerId) => api.post(`/admin/customers/${customerId}/resend-verification`),
 
   // Doğrulama maili — tüm bekleyenler
-  resendVerificationBulk: () => api.post('/admin/customers/resend-verification-bulk'),
+  resendVerificationBulk: () =>
+    api.post('/admin/customers/resend-verification-bulk', null, { timeout: BULK_TIMEOUT_MS }),
 
-  // Yedekleri listele
-  get: (endpoint) => api.get(`/admin${endpoint}`),
+  // Genel admin GET/POST/DELETE (BulkEmail, Backups vb.)
+  get: (endpoint, config) => api.get(`/admin${endpoint}`, config),
 
-  // Yeni yedek oluştur
-  post: (endpoint) => api.post(`/admin${endpoint}`),
+  post: (endpoint, data, config) => api.post(`/admin${endpoint}`, data, config),
 
-  // Yedek sil
-  delete: (endpoint) => api.delete(`/admin${endpoint}`)
+  delete: (endpoint, config) => api.delete(`/admin${endpoint}`, config)
 };
 
 // Email API'leri
