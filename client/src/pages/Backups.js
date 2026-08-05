@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
+  Box,
   Paper,
   Typography,
   Button,
@@ -28,6 +28,7 @@ import {
   Backup as BackupIcon
 } from '@mui/icons-material';
 import { adminAPI } from '../services/api';
+import PageHeader from '../components/PageHeader';
 
 const Backups = () => {
   const [backups, setBackups] = useState([]);
@@ -133,30 +134,27 @@ const Backups = () => {
 
   if (loading) {
     return (
-      <Container sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+      <Box display="flex" justifyContent="center" py={8}>
         <CircularProgress />
-      </Container>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Stack spacing={3}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="h4" gutterBottom>
-            Yedek Yönetimi
-          </Typography>
+    <Box>
+      <PageHeader
+        title="Yedek Yönetimi"
+        subtitle="Sistem yedeklerini oluşturun ve yönetin"
+        action={
           <Tooltip title="Sistemin anlık yedeğini al" arrow>
-            <Button
-              variant="contained"
-              startIcon={<BackupIcon />}
-              onClick={handleCreateBackup}
-              disabled={actionInProgress}
-            >
+            <Button variant="contained" startIcon={<BackupIcon />} onClick={handleCreateBackup} disabled={actionInProgress}>
               Yeni Yedek Al
             </Button>
           </Tooltip>
-        </Stack>
+        }
+      />
+
+      <Stack spacing={3}>
 
         {actionResult && (
           <Alert severity={actionResult.type} onClose={() => setActionResult(null)}>
@@ -282,7 +280,7 @@ const Backups = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 };
 

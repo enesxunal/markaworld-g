@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Container,
-  Paper,
   TextField,
   Button,
   Typography,
@@ -13,7 +11,7 @@ import {
   Step,
   StepLabel,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
 } from '@mui/material';
 import {
   Person,
@@ -23,15 +21,16 @@ import {
   CreditCard,
   CalendarToday,
   CheckCircle,
-  Lock
+  Lock,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
-import 'dayjs/locale/tr';
-import api, { customerAPI } from '../services/api';
+import { customerAPI } from '../services/api';
+import AuthShell from '../components/AuthShell';
+import { BRAND } from '../styles/brand';
 
 const steps = ['Kişisel Bilgiler', 'İletişim Bilgileri', 'Kayıt Tamamlandı'];
 
@@ -39,7 +38,7 @@ const CustomerRegister = () => {
   const [activeStep, setActiveStep] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+
   const [formData, setFormData] = useState({
     name: '',
     tc_no: '',
@@ -48,11 +47,10 @@ const CustomerRegister = () => {
     password: '',
     confirmPassword: '',
     birth_date: null,
-    address: ''
+    address: '',
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [registrationComplete, setRegistrationComplete] = useState(false);
   const [emailSent, setEmailSent] = useState(true);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
@@ -60,97 +58,56 @@ const CustomerRegister = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Hata varsa temizle
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const handleDateChange = (date) => {
-    setFormData(prev => ({
-      ...prev,
-      birth_date: date
-    }));
+    setFormData((prev) => ({ ...prev, birth_date: date }));
   };
 
   const validateStep = (step) => {
     const newErrors = {};
-
     if (step === 0) {
-      if (!formData.name.trim()) {
-        newErrors.name = 'Ad Soyad gerekli';
-      }
-      if (!formData.tc_no || formData.tc_no.length !== 11) {
-        newErrors.tc_no = 'TC Kimlik No 11 haneli olmalı';
-      }
-      if (!formData.phone.trim()) {
-        newErrors.phone = 'Telefon numarası gerekli';
-      }
+      if (!formData.name.trim()) newErrors.name = 'Ad Soyad gerekli';
+      if (!formData.tc_no || formData.tc_no.length !== 11) newErrors.tc_no = 'TC Kimlik No 11 haneli olmalı';
+      if (!formData.phone.trim()) newErrors.phone = 'Telefon numarası gerekli';
     }
-
     if (step === 1) {
-      if (!formData.email.trim()) {
-        newErrors.email = 'Email adresi gerekli';
-      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-        newErrors.email = 'Geçerli bir email adresi girin';
-      }
-      
-      if (!formData.password.trim()) {
-        newErrors.password = 'Şifre gerekli';
-      } else if (formData.password.length < 6) {
-        newErrors.password = 'Şifre en az 6 karakter olmalı';
-      }
-      
-      if (!formData.confirmPassword.trim()) {
-        newErrors.confirmPassword = 'Şifre tekrarı gerekli';
-      } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Şifreler eşleşmiyor';
-      }
+      if (!formData.email.trim()) newErrors.email = 'E-posta gerekli';
+      else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Geçerli bir e-posta girin';
+      if (!formData.password.trim()) newErrors.password = 'Şifre gerekli';
+      else if (formData.password.length < 6) newErrors.password = 'Şifre en az 6 karakter olmalı';
+      if (!formData.confirmPassword.trim()) newErrors.confirmPassword = 'Şifre tekrarı gerekli';
+      else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Şifreler eşleşmiyor';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleNext = () => {
-    if (validateStep(activeStep)) {
-      setActiveStep(prev => prev + 1);
-    }
+    if (validateStep(activeStep)) setActiveStep((prev) => prev + 1);
   };
 
-  const handleBack = () => {
-    setActiveStep(prev => prev - 1);
-  };
+  const handleBack = () => setActiveStep((prev) => prev - 1);
 
   const handleSubmit = async () => {
     if (!validateStep(1)) return;
-
     setLoading(true);
     try {
       const submitData = {
         ...formData,
-        birth_date: formData.birth_date ? formData.birth_date.format('YYYY-MM-DD') : null
+        birth_date: formData.birth_date ? formData.birth_date.format('YYYY-MM-DD') : null,
       };
-
       const response = await customerAPI.register(submitData);
-      
       if (response.data.success) {
         setEmailSent(response.data.emailSent !== false);
-        setRegistrationComplete(true);
         setActiveStep(2);
       }
     } catch (error) {
       if (error.response?.data?.errors) {
         const apiErrors = {};
-        error.response.data.errors.forEach(err => {
+        error.response.data.errors.forEach((err) => {
           apiErrors[err.path || 'general'] = err.msg;
         });
         setErrors(apiErrors);
@@ -164,527 +121,140 @@ const CustomerRegister = () => {
     }
   };
 
+  const handleResendEmail = async () => {
+    setResendLoading(true);
+    setResendMessage('');
+    try {
+      await customerAPI.resendVerification(formData.email);
+      setResendMessage('Doğrulama e-postası tekrar gönderildi.');
+    } catch (error) {
+      setResendMessage(error.response?.data?.error || 'E-posta gönderilemedi.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const fieldSx = {
+    '& .MuiOutlinedInput-root': { minHeight: isMobile ? 48 : 52, bgcolor: BRAND.white },
+  };
+
   const renderStepContent = (step) => {
     switch (step) {
       case 0:
         return (
-          <Grid container spacing={isMobile ? 2 : 3}>
+          <Grid container spacing={2}>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Ad Soyad"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                error={!!errors.name}
-                helperText={errors.name}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Person sx={{ 
-                        fontSize: isMobile ? '1.2rem' : '1.5rem',
-                        color: 'action.active'
-                      }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    minHeight: isMobile ? '48px' : '56px',
-                    backgroundColor: 'background.paper'
-                  },
-                  '& .MuiFormHelperText-root': {
-                    fontSize: isMobile ? '0.7rem' : '0.75rem'
-                  }
-                }}
-              />
+              <TextField fullWidth label="Ad Soyad" name="name" value={formData.name} onChange={handleChange}
+                error={!!errors.name} helperText={errors.name} sx={fieldSx}
+                InputProps={{ startAdornment: <InputAdornment position="start"><Person sx={{ color: BRAND.warmGray }} /></InputAdornment> }} />
             </Grid>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="TC Kimlik Numarası"
-                name="tc_no"
-                value={formData.tc_no}
-                onChange={handleChange}
-                error={!!errors.tc_no}
-                helperText={errors.tc_no}
-                inputProps={{ maxLength: 11 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <CreditCard sx={{ 
-                        fontSize: isMobile ? '1.2rem' : '1.5rem',
-                        color: 'action.active'
-                      }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    minHeight: isMobile ? '48px' : '56px',
-                    backgroundColor: 'background.paper'
-                  },
-                  '& .MuiFormHelperText-root': {
-                    fontSize: isMobile ? '0.7rem' : '0.75rem'
-                  }
-                }}
-              />
+              <TextField fullWidth label="TC Kimlik Numarası" name="tc_no" value={formData.tc_no} onChange={handleChange}
+                error={!!errors.tc_no} helperText={errors.tc_no} inputProps={{ maxLength: 11 }} sx={fieldSx}
+                InputProps={{ startAdornment: <InputAdornment position="start"><CreditCard sx={{ color: BRAND.warmGray }} /></InputAdornment> }} />
             </Grid>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Telefon Numarası"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                error={!!errors.phone}
-                helperText={errors.phone}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Phone sx={{ 
-                        fontSize: isMobile ? '1.2rem' : '1.5rem',
-                        color: 'action.active'
-                      }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    minHeight: isMobile ? '48px' : '56px',
-                    backgroundColor: 'background.paper'
-                  },
-                  '& .MuiFormHelperText-root': {
-                    fontSize: isMobile ? '0.7rem' : '0.75rem'
-                  }
-                }}
-              />
+              <TextField fullWidth label="Telefon Numarası" name="phone" value={formData.phone} onChange={handleChange}
+                error={!!errors.phone} helperText={errors.phone} sx={fieldSx}
+                InputProps={{ startAdornment: <InputAdornment position="start"><Phone sx={{ color: BRAND.warmGray }} /></InputAdornment> }} />
             </Grid>
             <Grid item xs={12}>
               <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="tr">
-                <DatePicker
-                  label="Doğum Tarihi"
-                  value={formData.birth_date}
-                  onChange={handleDateChange}
-                  format="DD.MM.YYYY"
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      error: !!errors.birth_date,
-                      helperText: errors.birth_date,
-                      InputProps: {
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <CalendarToday sx={{ 
-                              fontSize: isMobile ? '1.2rem' : '1.5rem',
-                              color: 'action.active'
-                            }} />
-                          </InputAdornment>
-                        ),
-                      },
-                      sx: {
-                        '& .MuiOutlinedInput-root': {
-                          minHeight: isMobile ? '48px' : '56px',
-                          backgroundColor: 'background.paper'
-                        },
-                        '& .MuiFormHelperText-root': {
-                          fontSize: isMobile ? '0.7rem' : '0.75rem'
-                        }
-                      }
-                    }
-                  }}
-                />
+                <DatePicker label="Doğum Tarihi" value={formData.birth_date} onChange={handleDateChange} format="DD.MM.YYYY"
+                  slotProps={{ textField: { fullWidth: true, sx: fieldSx,
+                    InputProps: { startAdornment: <InputAdornment position="start"><CalendarToday sx={{ color: BRAND.warmGray }} /></InputAdornment> } } }} />
               </LocalizationProvider>
             </Grid>
           </Grid>
         );
-
       case 1:
         return (
-          <Grid container spacing={isMobile ? 2 : 3}>
+          <Grid container spacing={2}>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                error={!!errors.email}
-                helperText={errors.email}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email sx={{ 
-                        fontSize: isMobile ? '1.2rem' : '1.5rem',
-                        color: 'action.active'
-                      }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    minHeight: isMobile ? '48px' : '56px',
-                    backgroundColor: 'background.paper'
-                  },
-                  '& .MuiFormHelperText-root': {
-                    fontSize: isMobile ? '0.7rem' : '0.75rem'
-                  }
-                }}
-              />
+              <TextField fullWidth label="E-posta" name="email" type="email" value={formData.email} onChange={handleChange}
+                error={!!errors.email} helperText={errors.email} sx={fieldSx}
+                InputProps={{ startAdornment: <InputAdornment position="start"><Email sx={{ color: BRAND.warmGray }} /></InputAdornment> }} />
             </Grid>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Şifre"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                error={!!errors.password}
-                helperText={errors.password}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock sx={{ 
-                        fontSize: isMobile ? '1.2rem' : '1.5rem',
-                        color: 'action.active'
-                      }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    minHeight: isMobile ? '48px' : '56px',
-                    backgroundColor: 'background.paper'
-                  },
-                  '& .MuiFormHelperText-root': {
-                    fontSize: isMobile ? '0.7rem' : '0.75rem'
-                  }
-                }}
-              />
+              <TextField fullWidth label="Şifre" name="password" type="password" value={formData.password} onChange={handleChange}
+                error={!!errors.password} helperText={errors.password} sx={fieldSx}
+                InputProps={{ startAdornment: <InputAdornment position="start"><Lock sx={{ color: BRAND.warmGray }} /></InputAdornment> }} />
             </Grid>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Şifre Tekrar"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                error={!!errors.confirmPassword}
-                helperText={errors.confirmPassword}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock sx={{ 
-                        fontSize: isMobile ? '1.2rem' : '1.5rem',
-                        color: 'action.active'
-                      }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    minHeight: isMobile ? '48px' : '56px',
-                    backgroundColor: 'background.paper'
-                  },
-                  '& .MuiFormHelperText-root': {
-                    fontSize: isMobile ? '0.7rem' : '0.75rem'
-                  }
-                }}
-              />
+              <TextField fullWidth label="Şifre Tekrar" name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange}
+                error={!!errors.confirmPassword} helperText={errors.confirmPassword} sx={fieldSx}
+                InputProps={{ startAdornment: <InputAdornment position="start"><Lock sx={{ color: BRAND.warmGray }} /></InputAdornment> }} />
             </Grid>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Adres"
-                name="address"
-                multiline
-                rows={3}
-                value={formData.address}
-                onChange={handleChange}
-                error={!!errors.address}
-                helperText={errors.address}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Home sx={{ 
-                        fontSize: isMobile ? '1.2rem' : '1.5rem',
-                        color: 'action.active'
-                      }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'background.paper'
-                  },
-                  '& .MuiFormHelperText-root': {
-                    fontSize: isMobile ? '0.7rem' : '0.75rem'
-                  }
-                }}
-              />
+              <TextField fullWidth label="Adres" name="address" value={formData.address} onChange={handleChange} multiline rows={2} sx={fieldSx}
+                InputProps={{ startAdornment: <InputAdornment position="start"><Home sx={{ color: BRAND.warmGray }} /></InputAdornment> }} />
             </Grid>
           </Grid>
         );
-
       case 2:
         return (
-          <Box textAlign="center" py={isMobile ? 2 : 4}>
-            <CheckCircle 
-              sx={{ 
-                fontSize: isMobile ? 64 : 80, 
-                color: 'success.main', 
-                mb: isMobile ? 2 : 3 
-              }} 
-            />
-            <Typography 
-              variant={isMobile ? "h5" : "h4"} 
-              gutterBottom 
-              color="success.main"
-              sx={{ fontWeight: 'bold' }}
-            >
-              Kayıt Başarılı!
+          <Box textAlign="center" py={2}>
+            <CheckCircle sx={{ fontSize: 56, color: BRAND.success, mb: 2 }} />
+            <Typography variant="h6" fontWeight={700} gutterBottom>Kayıt Başarılı</Typography>
+            <Typography color="text.secondary" mb={2}>
+              {emailSent
+                ? 'Doğrulama e-postası gönderildi. Lütfen e-postanızı kontrol edin.'
+                : 'Kayıt tamamlandı ancak e-posta gönderilemedi. Tekrar deneyebilirsiniz.'}
             </Typography>
-            {emailSent ? (
-              <Typography 
-                variant="body1" 
-                color="text.secondary" 
-                paragraph
-                sx={{ fontSize: isMobile ? '0.9rem' : '1rem', lineHeight: 1.6, maxWidth: '400px', mx: 'auto' }}
-              >
-                <strong>{formData.email}</strong> adresine doğrulama linki gönderildi.
-                Gelen kutusu ve spam klasörünü kontrol edin.
-              </Typography>
-            ) : (
-              <Alert severity="warning" sx={{ mb: 2, textAlign: 'left', maxWidth: 400, mx: 'auto' }}>
-                Kayıt oluşturuldu ancak doğrulama e-postası gönderilemedi.
-                Aşağıdaki butonla tekrar deneyin.
-              </Alert>
-            )}
-            {resendMessage && (
-              <Alert severity="info" sx={{ mb: 2, maxWidth: 400, mx: 'auto' }}>
-                {resendMessage}
-              </Alert>
-            )}
             {!emailSent && (
-              <Button
-                variant="outlined"
-                disabled={resendLoading}
-                onClick={async () => {
-                  try {
-                    setResendLoading(true);
-                    const res = await customerAPI.resendVerification(formData.email);
-                    setResendMessage(res.data.message);
-                    setEmailSent(true);
-                  } catch (err) {
-                    setResendMessage(err.response?.data?.error || 'E-posta gönderilemedi');
-                  } finally {
-                    setResendLoading(false);
-                  }
-                }}
-                sx={{ mb: 2 }}
-              >
+              <Button variant="outlined" onClick={handleResendEmail} disabled={resendLoading} sx={{ mb: 2 }}>
                 {resendLoading ? 'Gönderiliyor...' : 'Doğrulama E-postasını Tekrar Gönder'}
               </Button>
             )}
-            <Button
-              variant="contained"
-              onClick={() => navigate('/customer-login')}
-              sx={{ 
-                mt: isMobile ? 2 : 3,
-                px: isMobile ? 3 : 4,
-                py: isMobile ? 1.5 : 2,
-                fontSize: isMobile ? '0.9rem' : '1rem'
-              }}
-            >
-              Giriş Sayfasına Dön
+            {resendMessage && <Alert severity="info" sx={{ mb: 2 }}>{resendMessage}</Alert>}
+            <Button variant="contained" onClick={() => navigate('/customer-login')} sx={{ mt: 1 }}>
+              Giriş Sayfasına Git
             </Button>
           </Box>
         );
-
       default:
         return null;
     }
   };
 
   return (
-    <Container 
-      maxWidth="md" 
-      sx={{ 
-        py: isMobile ? 2 : 8,
-        px: isMobile ? 1 : 3,
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: isMobile ? 'transparent' : 'rgba(0,0,0,0.02)'
-      }}
-    >
-      <Paper 
-        elevation={isMobile ? 2 : 3} 
-        sx={{ 
-          p: isMobile ? 2 : 4, 
-          borderRadius: isMobile ? 2 : 3,
-          width: '100%',
-          boxShadow: isMobile ? '0 2px 8px rgba(0,0,0,0.1)' : '0 4px 16px rgba(0,0,0,0.1)'
-        }}
-      >
-        <Box textAlign="center" mb={isMobile ? 3 : 4}>
-          <img 
-            src="/logo.png" 
-            alt="Marka World" 
-            style={{ 
-              height: isMobile ? '60px' : '80px', 
-              marginBottom: isMobile ? '16px' : '20px',
-              width: 'auto'
-            }}
-          />
-          <Typography 
-            variant={isMobile ? "h5" : "h4"} 
-            component="h1" 
-            gutterBottom
-            sx={{ 
-              fontWeight: 'bold',
-              fontSize: isMobile ? '1.5rem' : '2rem'
-            }}
-          >
-            Yeni Hesap Oluştur
-          </Typography>
-          <Typography 
-            variant="body2" 
-            color="text.secondary"
-            sx={{ 
-              fontSize: isMobile ? '0.8rem' : '0.875rem',
-              maxWidth: '80%',
-              margin: '0 auto'
-            }}
-          >
-            Marka World'e hoş geldiniz! Lütfen bilgilerinizi girin.
-          </Typography>
-        </Box>
+    <AuthShell title="Üyelik Başvurusu" subtitle="Marka World müşteri hesabı oluşturun">
+      <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4, '& .MuiStepLabel-label': { fontSize: isMobile ? '0.7rem' : '0.85rem' } }}>
+        {steps.map((label) => (
+          <Step key={label}><StepLabel>{label}</StepLabel></Step>
+        ))}
+      </Stepper>
 
-        <Stepper 
-          activeStep={activeStep} 
-          alternativeLabel={!isMobile}
-          orientation={isMobile ? "vertical" : "horizontal"}
-          sx={{ 
-            mb: isMobile ? 3 : 4,
-            '& .MuiStepLabel-label': {
-              fontSize: isMobile ? '0.8rem' : '0.9rem'
-            }
-          }}
-        >
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
+      {errors.general && <Alert severity="error" sx={{ mb: 2 }}>{errors.general}</Alert>}
 
-        {errors.general && (
-          <Alert 
-            severity="error" 
-            sx={{ 
-              mb: 3,
-              fontSize: isMobile ? '0.8rem' : '0.875rem',
-              '& .MuiAlert-message': {
-                width: '100%'
-              }
-            }}
-          >
-            {errors.general}
-          </Alert>
-        )}
+      <Box>{renderStepContent(activeStep)}</Box>
 
-        {activeStep === 2 ? (
-          <Box textAlign="center">
-            <CheckCircle 
-              color="success" 
-              sx={{ 
-                fontSize: isMobile ? '64px' : '96px',
-                mb: 2
-              }} 
-            />
-            <Typography 
-              variant={isMobile ? "h5" : "h4"} 
-              gutterBottom
-              sx={{ fontWeight: 'bold' }}
-            >
-              Kayıt Başarılı!
-            </Typography>
-            <Typography 
-              variant="body1" 
-              color="text.secondary"
-              sx={{ mb: 4 }}
-            >
-              Hesabınız başarıyla oluşturuldu. Şimdi giriş yapabilirsiniz.
-            </Typography>
-            <Button
-              variant="contained"
-              onClick={() => navigate('/customer-login')}
-              size={isMobile ? "medium" : "large"}
-              sx={{ 
-                minWidth: 200,
-                py: isMobile ? 1 : 1.5,
-                boxShadow: 'none',
-                '&:hover': {
-                  boxShadow: 'none',
-                  opacity: 0.9
-                }
-              }}
-            >
-              Giriş Yap
+      {activeStep < 2 && (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4, gap: 2 }}>
+          <Button disabled={activeStep === 0} onClick={handleBack} variant="outlined" sx={{ flex: 1 }}>
+            Geri
+          </Button>
+          {activeStep === steps.length - 2 ? (
+            <Button onClick={handleSubmit} variant="contained" disabled={loading} sx={{ flex: 1, fontWeight: 700 }}>
+              {loading ? 'Kaydediliyor...' : 'Kayıt Ol'}
             </Button>
-          </Box>
-        ) : (
-          <>
-            {renderStepContent(activeStep)}
-            
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between',
-              mt: isMobile ? 3 : 4,
-              gap: 2
-            }}>
-              <Button
-                disabled={activeStep === 0}
-                onClick={handleBack}
-                variant="outlined"
-                size={isMobile ? "medium" : "large"}
-                sx={{ 
-                  minWidth: '120px',
-                  borderWidth: 2,
-                  '&:hover': {
-                    borderWidth: 2
-                  }
-                }}
-              >
-                Geri
-              </Button>
-              <Button
-                variant="contained"
-                onClick={activeStep === 1 ? handleSubmit : handleNext}
-                size={isMobile ? "medium" : "large"}
-                disabled={loading}
-                sx={{ 
-                  minWidth: '120px',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    boxShadow: 'none',
-                    opacity: 0.9
-                  }
-                }}
-              >
-                {activeStep === 1 ? (loading ? 'Kaydediliyor...' : 'Kaydet') : 'İleri'}
-              </Button>
-            </Box>
-          </>
-        )}
-      </Paper>
-    </Container>
+          ) : (
+            <Button onClick={handleNext} variant="contained" sx={{ flex: 1, fontWeight: 700 }}>
+              İleri
+            </Button>
+          )}
+        </Box>
+      )}
+
+      {activeStep < 2 && (
+        <Box textAlign="center" mt={3}>
+          <Button variant="text" onClick={() => navigate('/customer-login')} sx={{ color: BRAND.warmGray }}>
+            Zaten hesabınız var? Giriş yapın
+          </Button>
+        </Box>
+      )}
+    </AuthShell>
   );
 };
 
-export default CustomerRegister; 
+export default CustomerRegister;

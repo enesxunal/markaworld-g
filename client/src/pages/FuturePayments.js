@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Paper,
   Table,
   TableBody,
@@ -34,6 +33,8 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/tr';
 import { salesAPI } from '../services/api';
 import { Payment as PaymentIcon } from '@mui/icons-material';
+import PageHeader from '../components/PageHeader';
+import { BRAND, statCardSx, chipPaidSx, chipPendingSx, chipOverdueSx } from '../styles/brand';
 
 const FuturePayments = () => {
   const [payments, setPayments] = useState([]);
@@ -129,12 +130,12 @@ const FuturePayments = () => {
     fetchPayments();
   }, [startDate, endDate, status]);
 
-  const getStatusColor = (status, dueDate) => {
-    if (status === 'paid') return 'success';
+  const getStatusSx = (status, dueDate) => {
+    if (status === 'paid') return chipPaidSx;
     if (status === 'unpaid') {
-      return dayjs(dueDate).isBefore(dayjs(), 'day') ? 'error' : 'warning';
+      return dayjs(dueDate).isBefore(dayjs(), 'day') ? chipOverdueSx : chipPendingSx;
     }
-    return 'default';
+    return chipPendingSx;
   };
 
   const getStatusText = (status, dueDate) => {
@@ -154,42 +155,37 @@ const FuturePayments = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Box>
+      <PageHeader title="Ödemeler" subtitle="Taksit ödemeleri ve tahsilat takibi" />
       <Stack spacing={3}>
         {error && <Alert severity="error">{error}</Alert>}
 
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
-            <Card>
+            <Card elevation={0} sx={statCardSx}>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Toplam Ödenmiş
-                </Typography>
-                <Typography variant="h4" color="success.main">
+                <Typography variant="caption" sx={{ color: BRAND.warmGray }}>Toplam Ödenmiş</Typography>
+                <Typography variant="h5" fontWeight={700} sx={{ color: BRAND.black }}>
                   {totals.paid?.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={12} md={4}>
-            <Card>
+            <Card elevation={0} sx={statCardSx}>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Toplam Ödenmemiş
-                </Typography>
-                <Typography variant="h4" color="warning.main">
+                <Typography variant="caption" sx={{ color: BRAND.warmGray }}>Toplam Ödenmemiş</Typography>
+                <Typography variant="h5" fontWeight={700} sx={{ color: BRAND.black }}>
                   {totals.unpaid?.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={12} md={4}>
-            <Card>
+            <Card elevation={0} sx={statCardSx}>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Toplam Gecikmiş
-                </Typography>
-                <Typography variant="h4" color="error.main">
+                <Typography variant="caption" sx={{ color: BRAND.warmGray }}>Toplam Gecikmiş</Typography>
+                <Typography variant="h5" fontWeight={700} sx={{ color: BRAND.error }}>
                   {totals.overdue?.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
                 </Typography>
               </CardContent>
@@ -262,11 +258,11 @@ const FuturePayments = () => {
                         payment.calculated_status || payment.status,
                         payment.due_date
                       )}
-                      color={getStatusColor(
+                      size="small"
+                      sx={getStatusSx(
                         payment.calculated_status || payment.status,
                         payment.due_date
                       )}
-                      size="small"
                     />
                   </TableCell>
                   <TableCell>
@@ -321,7 +317,7 @@ const FuturePayments = () => {
           </DialogActions>
         </Dialog>
       </Stack>
-    </Container>
+    </Box>
   );
 };
 

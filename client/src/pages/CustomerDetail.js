@@ -26,7 +26,7 @@ import {
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
-  ExitToApp as ExitToAppIcon,
+  Edit as EditIcon,
   AccountBalance as AccountBalanceIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon,
   Person as PersonIcon,
@@ -40,6 +40,8 @@ import {
   History as HistoryIcon,
 } from '@mui/icons-material';
 import { customerAPI } from '../services/api';
+import PageHeader from '../components/PageHeader';
+import { chipPaidSx, chipPendingSx, chipOverdueSx } from '../styles/brand';
 import { format } from 'date-fns';
 
 function CustomerDetail() {
@@ -94,22 +96,13 @@ function CustomerDetail() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('customer');
-    navigate('/customer-login');
-  };
 
   const getInstallmentStatusChip = (status, dueDate) => {
     const today = new Date();
     const due = new Date(dueDate);
-    
-    if (status === 'paid') {
-      return <Chip label="Ödendi" color="success" size="small" />;
-    } else if (due < today) {
-      return <Chip label="Gecikmiş" color="error" size="small" />;
-    } else {
-      return <Chip label="Bekliyor" color="warning" size="small" />;
-    }
+    if (status === 'paid') return <Chip label="Ödendi" size="small" sx={chipPaidSx} />;
+    if (due < today) return <Chip label="Gecikmiş" size="small" sx={chipOverdueSx} />;
+    return <Chip label="Bekliyor" size="small" sx={chipPendingSx} />;
   };
 
   const handleInstallmentClick = (installment) => {
@@ -131,24 +124,15 @@ function CustomerDetail() {
 
   return (
     <Box>
-      {/* Header */}
-      <Paper elevation={1} sx={{ p: 2, mb: 3 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <img src="/logo.png" alt="Marka World" style={{ height: '40px' }} />
-            <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold' }}>
-              Müşteri Paneli
-            </Typography>
-          </Stack>
-          <Button
-            variant="outlined"
-            onClick={handleLogout}
-            startIcon={<ExitToAppIcon />}
-          >
-            Çıkış Yap
+      <PageHeader
+        title={customer.name}
+        subtitle={`TC: ${customer.tc_no} · ${customer.phone}`}
+        action={
+          <Button variant="outlined" onClick={() => navigate('/admin/customers', { state: { editCustomer: customer } })} startIcon={<EditIcon />}>
+            Düzenle
           </Button>
-        </Stack>
-      </Paper>
+        }
+      />
 
       <Grid container spacing={3}>
         {/* Müşteri Bilgileri */}

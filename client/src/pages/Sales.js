@@ -28,6 +28,8 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { salesAPI } from '../services/api';
+import PageHeader from '../components/PageHeader';
+import { filterBarSx, chipPaidSx, chipPendingSx, chipNeutralSx, BRAND } from '../styles/brand';
 
 function Sales() {
   const [sales, setSales] = useState([]);
@@ -98,20 +100,10 @@ function Sales() {
 
   const getProgressChip = (paid, total) => {
     const percentage = total > 0 ? (paid / total) * 100 : 0;
-    let color = 'default';
-    
-    if (percentage === 100) color = 'success';
-    else if (percentage > 50) color = 'info';
-    else if (percentage > 0) color = 'warning';
-    
-    return (
-      <Chip 
-        label={`${paid}/${total}`} 
-        color={color} 
-        size="small" 
-        variant="outlined"
-      />
-    );
+    let colorSx = chipNeutralSx;
+    if (percentage === 100) colorSx = chipPaidSx;
+    else if (percentage > 0) colorSx = chipPendingSx;
+    return <Chip label={`${paid}/${total}`} size="small" sx={colorSx} />;
   };
 
   if (loading) {
@@ -124,19 +116,16 @@ function Sales() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Satışlar</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/admin/sales/new')}
-        >
-          Yeni Satış
-        </Button>
-      </Box>
+      <PageHeader
+        title="Satışlar"
+        action={
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/admin/sales/new')}>
+            Yeni Satış
+          </Button>
+        }
+      />
 
-      {/* Arama ve Filtreleme */}
-      <Box mb={3}>
+      <Paper elevation={0} sx={{ ...filterBarSx, mb: 3 }}>
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <TextField
@@ -168,10 +157,9 @@ function Sales() {
             </FormControl>
           </Grid>
         </Grid>
-      </Box>
+      </Paper>
 
-      {/* Satış Tablosu */}
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${BRAND.border}` }}>
         <Table>
           <TableHead>
             <TableRow>

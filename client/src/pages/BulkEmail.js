@@ -28,6 +28,8 @@ import {
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import { adminAPI } from '../services/api';
+import PageHeader from '../components/PageHeader';
+import { pageCardSx } from '../styles/brand';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -249,21 +251,18 @@ const BulkEmail = () => {
 
   return (
     <Box>
+      <PageHeader
+        title="Toplu Kampanya Maili"
+        subtitle="Görsel editör veya HTML kodu ile kampanya mailleri gönderin"
+        action={
+          <Button startIcon={<RefreshIcon />} onClick={loadRecipients} disabled={listLoading}>
+            Listeyi yenile
+          </Button>
+        }
+      />
+
       <Stack spacing={3}>
-        <Paper sx={{ p: 3 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2} mb={2}>
-            <Box>
-              <Typography variant="h4" fontWeight={700} gutterBottom>
-                Toplu Kampanya Maili
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Görsel editör veya HTML kodu ile profesyonel kampanya mailleri gönderin
-              </Typography>
-            </Box>
-            <Button startIcon={<RefreshIcon />} onClick={loadRecipients} disabled={listLoading}>
-              Listeyi yenile
-            </Button>
-          </Stack>
+        <Paper elevation={0} sx={{ ...pageCardSx, p: 3 }}>
 
           {result && (
             <Alert severity={result.type} sx={{ mb: 2 }} onClose={() => setResult(null)}>

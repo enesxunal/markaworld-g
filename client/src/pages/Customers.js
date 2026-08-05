@@ -51,6 +51,8 @@ import {
   Send as SendIcon
 } from '@mui/icons-material';
 import { customerAPI, adminAPI } from '../services/api';
+import PageHeader from '../components/PageHeader';
+import { BRAND, filterBarSx, chipPaidSx, chipPendingSx, chipNeutralSx } from '../styles/brand';
 
 function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -222,15 +224,15 @@ function Customers() {
 
   const getStatusChip = (customer) => {
     if (needsVerification(customer)) {
-      return <Chip label="E-posta bekliyor" color="warning" size="small" />;
+      return <Chip label="E-posta bekliyor" size="small" sx={chipPendingSx} />;
     }
     const statusMap = {
-      active: { label: 'Aktif', color: 'success' },
-      passive: { label: 'Pasif', color: 'default' },
-      pending: { label: 'Beklemede', color: 'warning' }
+      active: { label: 'Aktif', sx: chipPaidSx },
+      passive: { label: 'Pasif', sx: chipNeutralSx },
+      pending: { label: 'Beklemede', sx: chipPendingSx },
     };
-    const statusInfo = statusMap[customer.status] || { label: customer.status, color: 'default' };
-    return <Chip label={statusInfo.label} color={statusInfo.color} size="small" />;
+    const statusInfo = statusMap[customer.status] || { label: customer.status, sx: chipNeutralSx };
+    return <Chip label={statusInfo.label} size="small" sx={statusInfo.sx} />;
   };
 
   const handleCardExpand = (customerId) => {
@@ -377,43 +379,28 @@ function Customers() {
   }
 
   return (
-    <Box sx={{ p: isMobile ? 1 : 0 }}>
-      {/* Header */}
-      <Stack 
-        direction={isMobile ? "column" : "row"}
-        justifyContent="space-between" 
-        alignItems={isMobile ? "stretch" : "center"}
-        spacing={isMobile ? 2 : 0}
-        mb={3}
-      >
-        <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 'bold' }}>
-          Müşteriler ({filteredCustomers.length})
-        </Typography>
-        <Stack direction={isMobile ? 'column' : 'row'} spacing={1}>
-          {pendingVerificationCount > 0 && (
-            <Button
-              variant="outlined"
-              color="warning"
-              startIcon={<SendIcon />}
-              disabled={verifyBusy}
-              onClick={handleBulkResendVerification}
-              size={isMobile ? 'medium' : 'large'}
-              sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}
-            >
-              Doğrulama Maili ({pendingVerificationCount})
+    <Box sx={{ p: isMobile ? 0 : 0 }}>
+      <PageHeader
+        title={`Müşteriler (${filteredCustomers.length})`}
+        action={
+          <Stack direction={isMobile ? 'column' : 'row'} spacing={1}>
+            {pendingVerificationCount > 0 && (
+              <Button
+                variant="outlined"
+                startIcon={<SendIcon />}
+                disabled={verifyBusy}
+                onClick={handleBulkResendVerification}
+                size={isMobile ? 'medium' : 'large'}
+              >
+                Doğrulama Maili ({pendingVerificationCount})
+              </Button>
+            )}
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()} size={isMobile ? 'medium' : 'large'}>
+              Yeni Müşteri
             </Button>
-          )}
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-            size={isMobile ? "medium" : "large"}
-            sx={{ fontSize: isMobile ? '0.8rem' : '0.9rem' }}
-          >
-            Yeni Müşteri
-          </Button>
-        </Stack>
-      </Stack>
+          </Stack>
+        }
+      />
 
       {loadError && (
         <Alert severity="warning" sx={{ mb: 2 }}>{loadError}</Alert>
@@ -430,7 +417,7 @@ function Customers() {
       )}
 
       {/* Arama ve Filtreleme */}
-      <Paper sx={{ p: isMobile ? 1.5 : 2, mb: 2 }}>
+      <Paper elevation={0} sx={{ ...filterBarSx, p: isMobile ? 1.5 : 2, mb: 2 }}>
         <Grid container spacing={isMobile ? 1.5 : 2}>
           <Grid item xs={12} md={8}>
             <TextField

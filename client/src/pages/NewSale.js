@@ -28,6 +28,7 @@ import {
   Save as SaveIcon,
 } from '@mui/icons-material';
 import { customerAPI, salesAPI } from '../services/api';
+import PageHeader from '../components/PageHeader';
 
 function NewSale() {
   const navigate = useNavigate();
@@ -148,18 +149,14 @@ function NewSale() {
 
   return (
     <Box>
-      <Box display="flex" alignItems="center" mb={3}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/admin/sales')}
-          sx={{ mr: 2 }}
-        >
-          Geri
-        </Button>
-        <Typography variant="h4">
-          Yeni Taksitli Satış
-        </Typography>
-      </Box>
+      <PageHeader
+        title="Yeni Taksitli Satış"
+        action={
+          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/admin/sales')}>
+            Geri
+          </Button>
+        }
+      />
 
       <Grid container spacing={3}>
         {/* Satış Formu */}

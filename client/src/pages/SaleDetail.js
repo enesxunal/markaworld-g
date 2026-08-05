@@ -21,12 +21,14 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Stack,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Payment as PaymentIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
+import PageHeader from '../components/PageHeader';
 import { salesAPI } from '../services/api';
 
 function SaleDetail() {
@@ -130,23 +132,20 @@ function SaleDetail() {
 
   return (
     <Box>
-      <Box display="flex" alignItems="center" mb={3}>
-        <IconButton onClick={() => navigate('/admin/sales')} sx={{ mr: 2 }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Satış Detayı #{sale.id}
-        </Typography>
-        {getStatusChip(sale.status)}
-        <Button
-          color="error"
-          startIcon={<DeleteIcon />}
-          onClick={() => setDeleteDialog(true)}
-          sx={{ ml: 2 }}
-        >
-          Sil
-        </Button>
-      </Box>
+      <PageHeader
+        title={`Satış Detayı #${sale.id}`}
+        action={
+          <Stack direction="row" spacing={1} alignItems="center">
+            {getStatusChip(sale.status)}
+            <Button color="error" startIcon={<DeleteIcon />} onClick={() => setDeleteDialog(true)}>
+              Sil
+            </Button>
+            <IconButton onClick={() => navigate('/admin/sales')} aria-label="Geri">
+              <ArrowBackIcon />
+            </IconButton>
+          </Stack>
+        }
+      />
 
       <Grid container spacing={3}>
         {/* Satış Bilgileri */}

@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Container,
-  Paper,
   TextField,
   Button,
   Typography,
@@ -10,17 +8,14 @@ import {
   InputAdornment,
   IconButton,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
 } from '@mui/material';
-import {
-  Visibility,
-  VisibilityOff,
-  AdminPanelSettings,
-  Login
-} from '@mui/icons-material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { adminAPI } from '../services/api';
 import { clearCustomerSession } from '../utils/apiAuth';
+import AuthShell from '../components/AuthShell';
+import { BRAND } from '../styles/brand';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -28,20 +23,14 @@ const AdminLogin = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const sessionExpired = searchParams.get('session') === 'expired';
-  
-  const [formData, setFormData] = useState({
-    username: '',
-    password: ''
-  });
+
+  const [formData, setFormData] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
     setError('');
   };
 
@@ -49,24 +38,19 @@ const AdminLogin = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     try {
       const response = await adminAPI.login(formData);
-      
       if (response.data.success) {
         clearCustomerSession();
         localStorage.setItem('adminToken', response.data.token);
         localStorage.setItem('adminUser', JSON.stringify(response.data.admin));
-        
-        // Admin dashboard'a yönlendir
         navigate('/admin/dashboard', { replace: true });
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      const serverMsg = error.response?.data?.error;
-      if (error.response?.status === 401) {
-        setError(serverMsg || 'Kullanıcı adı veya şifre hatalı. Sunucudaki ADMIN_PASSWORD ile aynı olmalı.');
-      } else if (error.response?.status === 503) {
+    } catch (err) {
+      const serverMsg = err.response?.data?.error;
+      if (err.response?.status === 401) {
+        setError(serverMsg || 'Kullanıcı adı veya şifre hatalı.');
+      } else if (err.response?.status === 503) {
         setError(serverMsg || 'Sunucu ayarı eksik (ADMIN_PASSWORD tanımlı değil).');
       } else {
         setError(serverMsg || 'Giriş başarısız');
@@ -76,167 +60,74 @@ const AdminLogin = () => {
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
   return (
-    <Container 
-      maxWidth="sm" 
-      sx={{ 
-        py: isMobile ? 2 : 8,
-        px: isMobile ? 1 : 3,
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}
-    >
-      <Paper 
-        elevation={isMobile ? 4 : 6} 
-        sx={{ 
-          p: isMobile ? 3 : 4, 
-          borderRadius: isMobile ? 2 : 3,
-          width: '100%',
-          maxWidth: isMobile ? '100%' : '500px'
-        }}
-      >
-        <Box textAlign="center" mb={isMobile ? 3 : 4}>
-          <AdminPanelSettings 
-            sx={{ 
-              fontSize: isMobile ? 48 : 60, 
-              color: 'primary.main', 
-              mb: isMobile ? 1.5 : 2 
-            }} 
-          />
-          <Typography 
-            variant={isMobile ? "h5" : "h4"} 
-            gutterBottom 
-            sx={{ fontWeight: 'bold' }}
-          >
-            Admin Paneli
-          </Typography>
-          <Typography 
-            variant={isMobile ? "body2" : "h6"} 
-            color="text.secondary"
-            sx={{ fontSize: isMobile ? '0.8rem' : '1rem' }}
-          >
-            Marka World Yönetim Sistemi
-          </Typography>
-        </Box>
+    <AuthShell title="Admin Paneli" subtitle="Marka World Yönetim Sistemi">
+      <form onSubmit={handleSubmit}>
+        <TextField
+          fullWidth
+          label="Kullanıcı Adı"
+          name="username"
+          value={formData.username}
+          onChange={handleChange}
+          margin="normal"
+          required
+          autoComplete="username"
+          autoFocus
+          sx={{ mb: 2, '& .MuiOutlinedInput-root': { minHeight: isMobile ? 48 : 52 } }}
+        />
 
-        <form onSubmit={handleSubmit}>
-          <TextField
-            fullWidth
-            label="Kullanıcı Adı"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            margin="normal"
-            required
-            autoComplete="username"
-            autoFocus
-            sx={{ 
-              mb: isMobile ? 1.5 : 2,
-              '& .MuiOutlinedInput-root': {
-                minHeight: isMobile ? '48px' : '56px',
-              }
-            }}
-          />
+        <TextField
+          fullWidth
+          label="Şifre"
+          name="password"
+          type={showPassword ? 'text' : 'password'}
+          value={formData.password}
+          onChange={handleChange}
+          margin="normal"
+          required
+          autoComplete="current-password"
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+          sx={{ mb: 2, '& .MuiOutlinedInput-root': { minHeight: isMobile ? 48 : 52 } }}
+        />
 
-          <TextField
-            fullWidth
-            label="Şifre"
-            name="password"
-            type={showPassword ? 'text' : 'password'}
-            value={formData.password}
-            onChange={handleChange}
-            margin="normal"
-            required
-            autoComplete="current-password"
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={togglePasswordVisibility}
-                    edge="end"
-                    size={isMobile ? 'small' : 'medium'}
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            sx={{ 
-              mb: isMobile ? 2 : 3,
-              '& .MuiOutlinedInput-root': {
-                minHeight: isMobile ? '48px' : '56px',
-              }
-            }}
-          />
+        {sessionExpired && (
+          <Alert severity="warning" sx={{ mb: 2 }}>Oturum süresi doldu. Lütfen tekrar giriş yapın.</Alert>
+        )}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-          {sessionExpired && (
-            <Alert severity="warning" sx={{ mb: 2, fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
-              Oturum süresi doldu. Lütfen tekrar giriş yapın.
-            </Alert>
-          )}
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          size="large"
+          disabled={loading}
+          sx={{ py: 1.5, fontWeight: 700, fontSize: '1rem', mb: 2 }}
+        >
+          {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
+        </Button>
 
-          {error && (
-            <Alert 
-              severity="error" 
-              sx={{ 
-                mb: 2,
-                fontSize: isMobile ? '0.8rem' : '0.875rem'
-              }}
-            >
-              {error}
-            </Alert>
-          )}
-
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            size="large"
-            disabled={loading}
-            startIcon={<Login />}
-            sx={{ 
-              py: isMobile ? 1.5 : 2,
-              fontSize: isMobile ? '1rem' : '1.1rem',
-              fontWeight: 'bold',
-              mb: 2
-            }}
-          >
-            {loading ? 'Giriş Yapılıyor...' : 'GİRİŞ YAP'}
+        <Box textAlign="center">
+          <Button variant="text" onClick={() => navigate('/customer-login')} sx={{ color: BRAND.warmGray, fontSize: '0.9rem' }}>
+            Müşteri Girişi
           </Button>
-
-          <Box textAlign="center">
-            <Button
-              variant="text"
-              onClick={() => navigate('/customer-login')}
-              sx={{ 
-                color: 'text.secondary',
-                fontSize: isMobile ? '0.8rem' : '0.9rem',
-                minHeight: isMobile ? '36px' : '40px'
-              }}
-            >
-              Müşteri Girişi
-            </Button>
-          </Box>
-        </form>
-
-        <Box mt={isMobile ? 3 : 4} textAlign="center">
-          <Typography 
-            variant="body2" 
-            color="text.secondary"
-            sx={{ fontSize: isMobile ? '0.7rem' : '0.8rem' }}
-          >
-            © 2024 Marka World - Tüm hakları saklıdır
-          </Typography>
         </Box>
-      </Paper>
-    </Container>
+      </form>
+
+      <Box mt={4} textAlign="center">
+        <Typography variant="body2" sx={{ color: BRAND.muted, fontSize: '0.8rem' }}>
+          © 2025 Marka World
+        </Typography>
+      </Box>
+    </AuthShell>
   );
 };
 
-export default AdminLogin; 
+export default AdminLogin;
