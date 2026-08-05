@@ -45,12 +45,13 @@ const Backups = () => {
       setError(null);
       const response = await adminAPI.get('/backups');
       if (response.data.success) {
-        setBackups(response.data.backups);
+        setBackups(response.data.backups || []);
       } else {
-        setError('Yedekler yüklenirken bir hata oluştu');
+        setError(response.data.error || 'Yedekler yüklenirken bir hata oluştu');
       }
     } catch (error) {
-      setError('Yedekler yüklenirken bir hata oluştu: ' + error.message);
+      const apiMsg = error.response?.data?.error;
+      setError(apiMsg || ('Yedekler yüklenirken bir hata oluştu: ' + error.message));
     } finally {
       setLoading(false);
     }
@@ -70,10 +71,17 @@ const Backups = () => {
         setActionResult({ type: 'success', message: 'Yedek başarıyla oluşturuldu' });
         loadBackups();
       } else {
-        setActionResult({ type: 'error', message: 'Yedek oluşturulurken bir hata oluştu' });
+        setActionResult({
+          type: 'error',
+          message: response.data.error || 'Yedek oluşturulurken bir hata oluştu'
+        });
       }
     } catch (error) {
-      setActionResult({ type: 'error', message: 'Yedek oluşturulurken bir hata oluştu: ' + error.message });
+      const apiMsg = error.response?.data?.error;
+      setActionResult({
+        type: 'error',
+        message: apiMsg || ('Yedek oluşturulurken bir hata oluştu: ' + error.message)
+      });
     } finally {
       setActionInProgress(false);
     }

@@ -5,6 +5,7 @@ const { promisify } = require('util');
 const zlib = require('zlib');
 const { db } = require('../database/init');
 const { resolveSafeBackupPath, isInvalidBackupNameError } = require('../utils/backupPath');
+const { selectAllOrEmpty } = require('../utils/backupFetch');
 
 const BACKUP_DIR = path.join(__dirname, '..', 'backups');
 const MAX_BACKUPS = 30; // 30 gün yedek tutma
@@ -14,41 +15,16 @@ if (!fs.existsSync(BACKUP_DIR)) {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
 }
 
-// Veritabanından veri çekme
+// Veritabanından veri çekme (eksik opsiyonel tablolar yedeklemeyi çökertmez)
 async function fetchDataForBackup() {
-  return new Promise((resolve, reject) => {
-    const data = {
-      customers: [],
-      sales: [],
-      installments: [],
-      late_payment_fees: []
-    };
+  const [customers, sales, installments, late_payment_fees] = await Promise.all([
+    selectAllOrEmpty(db, 'customers'),
+    selectAllOrEmpty(db, 'sales'),
+    selectAllOrEmpty(db, 'installments'),
+    selectAllOrEmpty(db, 'late_payment_fees')
+  ]);
 
-    // Müşterileri çek
-    db.all('SELECT * FROM customers', [], (err, customers) => {
-      if (err) return reject(err);
-      data.customers = customers;
-
-      // Satışları çek
-      db.all('SELECT * FROM sales', [], (err, sales) => {
-        if (err) return reject(err);
-        data.sales = sales;
-
-        // Taksitleri çek
-        db.all('SELECT * FROM installments', [], (err, installments) => {
-          if (err) return reject(err);
-          data.installments = installments;
-
-          // Gecikme faizlerini çek
-          db.all('SELECT * FROM late_payment_fees', [], (err, fees) => {
-            if (err) return reject(err);
-            data.late_payment_fees = fees;
-            resolve(data);
-          });
-        });
-      });
-    });
-  });
+  return { customers, sales, installments, late_payment_fees };
 }
 
 // XML oluştur ve sıkıştır
@@ -125,20 +101,24 @@ async function getBackups() {
     const files = await promisify(fs.readdir)(BACKUP_DIR);
     console.log('🔍 [BACKUP] Tüm dosyalar:', files);
     
-    const backups = await Promise.all(
-      files
-        .filter(f => f.startsWith('backup_') && f.endsWith('.xml.gz'))
-        .sort((a, b) => b.localeCompare(a))
-        .map(async file => {
-          const stats = await promisify(fs.stat)(path.join(BACKUP_DIR, file));
-          return {
-            filename: file,
-            date: file.split('_')[1].split('.')[0].replace(/-/g, ':'),
-            size: (stats.size / 1024).toFixed(2) + ' KB'
-          };
-        })
-    );
-    console.log('🔍 [BACKUP] Filtrelenmiş yedekler:', backups);
+    const candidates = files
+      .filter(f => f.startsWith('backup_') && f.endsWith('.xml.gz'))
+      .sort((a, b) => b.localeCompare(a));
+
+    const backups = [];
+    for (const file of candidates) {
+      try {
+        const stats = await promisify(fs.stat)(path.join(BACKUP_DIR, file));
+        backups.push({
+          filename: file,
+          date: file.split('_')[1].split('.')[0].replace(/-/g, ':'),
+          size: (stats.size / 1024).toFixed(2) + ' KB'
+        });
+      } catch (fileErr) {
+        console.warn('🔍 [BACKUP] Bozuk/okunamayan yedek atlandı:', file, fileErr.message);
+      }
+    }
+    console.log('🔍 [BACKUP] Filtrelenmiş yedekler:', backups.length);
     return { success: true, backups };
   } catch (error) {
     console.error('🔍 [BACKUP] getBackups hatası:', error);
