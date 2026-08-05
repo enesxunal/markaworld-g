@@ -16,7 +16,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { customerAPI } from '../services/api';
 import { clearAdminSession } from '../utils/apiAuth';
 import AuthShell from '../components/AuthShell';
+import SeoHead from '../components/SeoHead';
 import { BRAND } from '../styles/brand';
+import { SEO_PAGES } from '../seo/siteConfig';
 
 const CustomerLogin = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -57,7 +59,14 @@ const CustomerLogin = () => {
   };
 
   return (
-    <AuthShell title="Müşteri Girişi" subtitle="E-posta ve şifreniz ile giriş yapın">
+    <>
+      <SeoHead
+        title={SEO_PAGES.customerLogin.title}
+        description={SEO_PAGES.customerLogin.description}
+        robots={SEO_PAGES.customerLogin.robots}
+        noCanonical
+      />
+      <AuthShell title="Müşteri Girişi" subtitle="E-posta ve şifreniz ile giriş yapın">
       {successMessage && (
         <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>
       )}
@@ -143,6 +152,7 @@ const CustomerLogin = () => {
         </Box>
       </form>
     </AuthShell>
+    </>
   );
 };
 

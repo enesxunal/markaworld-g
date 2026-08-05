@@ -12,6 +12,8 @@ import {
 } from '@mui/material';
 import { emailAPI } from '../services/api';
 import PublicLayout from '../components/PublicLayout';
+import SeoHead from '../components/SeoHead';
+import { SEO_PAGES } from '../seo/siteConfig';
 
 const Unsubscribe = () => {
   const [searchParams] = useSearchParams();
@@ -66,7 +68,13 @@ const Unsubscribe = () => {
 
   return (
     <PublicLayout>
-      <Container maxWidth="sm" sx={{ py: 8 }}>
+      <SeoHead
+        title={SEO_PAGES.unsubscribe.title}
+        description={SEO_PAGES.unsubscribe.description}
+        robots={SEO_PAGES.unsubscribe.robots}
+        noCanonical
+      />
+      <Container maxWidth="sm" sx={{ py: 8 }} component="main">
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom align="center">
             Abonelikten Çık

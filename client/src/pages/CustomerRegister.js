@@ -30,7 +30,9 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { customerAPI } from '../services/api';
 import AuthShell from '../components/AuthShell';
+import SeoHead from '../components/SeoHead';
 import { BRAND } from '../styles/brand';
+import { SEO_PAGES } from '../seo/siteConfig';
 
 const steps = ['Kişisel Bilgiler', 'İletişim Bilgileri', 'Kayıt Tamamlandı'];
 
@@ -218,7 +220,14 @@ const CustomerRegister = () => {
   };
 
   return (
-    <AuthShell title="Üyelik Başvurusu" subtitle="Marka World müşteri hesabı oluşturun">
+    <>
+      <SeoHead
+        title={SEO_PAGES.customerRegister.title}
+        description={SEO_PAGES.customerRegister.description}
+        robots={SEO_PAGES.customerRegister.robots}
+        noCanonical
+      />
+      <AuthShell title="Üyelik Başvurusu" subtitle="Marka World müşteri hesabı oluşturun">
       <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4, '& .MuiStepLabel-label': { fontSize: isMobile ? '0.7rem' : '0.85rem' } }}>
         {steps.map((label) => (
           <Step key={label}><StepLabel>{label}</StepLabel></Step>
@@ -254,6 +263,7 @@ const CustomerRegister = () => {
         </Box>
       )}
     </AuthShell>
+    </>
   );
 };
 

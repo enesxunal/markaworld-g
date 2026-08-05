@@ -19,6 +19,8 @@ import {
 } from '@mui/material';
 import { clearAdminSession, clearCustomerSession } from '../utils/apiAuth';
 import { BRAND } from '../styles/brand';
+import SeoHead from './SeoHead';
+import { SEO_PAGES } from '../seo/siteConfig';
 import {
   ExitToApp,
   Dashboard as DashboardIcon,
@@ -117,8 +119,16 @@ const Layout = ({ isAdmin }) => {
     </Box>
   );
 
+  const panelSeo = isAdmin ? SEO_PAGES.adminApp : SEO_PAGES.customerApp;
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+      <SeoHead
+        title={panelSeo.title}
+        description={panelSeo.description}
+        robots={panelSeo.robots}
+        noCanonical
+      />
       <AppBar position="fixed" elevation={0}>
         <Toolbar sx={{ justifyContent: 'space-between', gap: 2 }}>
           <Stack direction="row" alignItems="center" spacing={2}>

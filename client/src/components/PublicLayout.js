@@ -66,19 +66,26 @@ const PublicLayout = ({ children }) => {
       {/* Header */}
       <AppBar position="fixed" sx={{ background: 'rgba(0, 0, 0, 0.95)' }}>
         <StyledToolbar>
-          <Box 
-            component="img" 
-            src="/markalogo-w.png"
-            alt="Marka World Logo"
-            sx={{ 
-              height: { xs: 35, sm: 40, md: 45 },
-              width: 'auto',
-              objectFit: 'contain',
-              filter: 'brightness(0) invert(1)',
-              cursor: 'pointer'
-            }}
-            onClick={() => navigate('/')}
-          />
+          <Box
+            component={RouterLink}
+            to="/"
+            aria-label="Marka World anasayfa"
+            sx={{ display: 'inline-flex', lineHeight: 0 }}
+          >
+            <Box
+              component="img"
+              src="/logo.png"
+              alt="Marka World"
+              width={180}
+              height={31}
+              sx={{
+                height: { xs: 35, sm: 40, md: 45 },
+                width: 'auto',
+                objectFit: 'contain',
+                filter: 'brightness(0) invert(1)',
+              }}
+            />
+          </Box>
           
           {isMobile ? (
             <>
@@ -97,6 +104,14 @@ const PublicLayout = ({ children }) => {
                 <MenuItem onClick={() => scrollToSection('how-it-works')}>Nasıl Çalışır</MenuItem>
                 <MenuItem onClick={() => scrollToSection('products')}>Ürünler</MenuItem>
                 <MenuItem onClick={() => scrollToSection('features')}>Avantajlar</MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    navigate('/blog');
+                    handleClose();
+                  }}
+                >
+                  Blog
+                </MenuItem>
                 <MenuItem onClick={() => scrollToSection('contact')}>İletişim</MenuItem>
                 <MenuItem onClick={() => navigate('/customer-login')}>Giriş Yap</MenuItem>
               </Menu>
@@ -112,6 +127,9 @@ const PublicLayout = ({ children }) => {
                 </Button>
                 <Button color="inherit" onClick={() => scrollToSection('features')}>
                   Avantajlar
+                </Button>
+                <Button color="inherit" onClick={() => navigate('/blog')}>
+                  Blog
                 </Button>
                 <Button color="inherit" onClick={() => scrollToSection('contact')}>
                   İletişim
@@ -211,6 +229,18 @@ const PublicLayout = ({ children }) => {
                   sx={{ color: 'grey.400', textAlign: 'left', '&:hover': { color: 'white' } }}
                 >
                   Avantajlar
+                </MuiLink>
+                <MuiLink
+                  component={RouterLink}
+                  to="/blog"
+                  sx={{
+                    color: 'grey.400',
+                    textDecoration: 'none',
+                    textAlign: 'left',
+                    '&:hover': { color: 'white' },
+                  }}
+                >
+                  Blog
                 </MuiLink>
                 <MuiLink
                   component="button"

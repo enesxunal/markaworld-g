@@ -1,27 +1,18 @@
 {
   "short_name": "Marka World",
-  "name": "Marka World - Müşteri Ödeme Takip Sistemi",
+  "name": "Marka World",
   "icons": [
     {
-      "src": "favicon.svg",
-      "type": "image/svg+xml",
-      "sizes": "any"
-    },
-    {
       "src": "logo.png",
       "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "logo.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "654x112",
+      "purpose": "any"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
   "theme_color": "#000000",
   "background_color": "#ffffff",
-  "description": "Profesyonel müşteri ödeme takip sistemi",
-  "categories": ["business", "finance", "productivity"]
+  "description": "Tokat’ta taksitli marka alışverişi ve müşteri ödeme takibi",
+  "lang": "tr"
 }

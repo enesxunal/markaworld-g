@@ -15,7 +15,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { adminAPI } from '../services/api';
 import { clearCustomerSession } from '../utils/apiAuth';
 import AuthShell from '../components/AuthShell';
+import SeoHead from '../components/SeoHead';
 import { BRAND } from '../styles/brand';
+import { SEO_PAGES } from '../seo/siteConfig';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -61,7 +63,14 @@ const AdminLogin = () => {
   };
 
   return (
-    <AuthShell title="Admin Paneli" subtitle="Marka World Yönetim Sistemi">
+    <>
+      <SeoHead
+        title={SEO_PAGES.adminLogin.title}
+        description={SEO_PAGES.adminLogin.description}
+        robots={SEO_PAGES.adminLogin.robots}
+        noCanonical
+      />
+      <AuthShell title="Admin Paneli" subtitle="Marka World Yönetim Sistemi">
       <form onSubmit={handleSubmit}>
         <TextField
           fullWidth
@@ -127,6 +136,7 @@ const AdminLogin = () => {
         </Typography>
       </Box>
     </AuthShell>
+    </>
   );
 };
 

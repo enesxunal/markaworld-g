@@ -103,6 +103,9 @@ jspm_packages/
 # Gatsby files
 .cache/
 public
+# CRA static assets live under client/public — keep them versioned
+!client/public/
+!client/public/**
 
 # Storybook build outputs
 .out

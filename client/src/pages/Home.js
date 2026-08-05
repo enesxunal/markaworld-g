@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Container,
@@ -45,6 +45,8 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { emailAPI } from '../services/api';
 import { BRAND } from '../styles/brand';
+import SeoHead from '../components/SeoHead';
+import { SEO_PAGES, buildHomeJsonLd } from '../seo/siteConfig';
 
 const WHATSAPP_URL = 'https://wa.me/905368324660';
 const PHONE_DISPLAY = '(0356) 502 78 99';
@@ -230,6 +232,7 @@ const NAV_ITEMS = [
   { label: 'Ürünler', id: 'products' },
   { label: 'Taksitli Alışveriş', id: 'installments' },
   { label: 'Nasıl Çalışır', id: 'how-it-works' },
+  { label: 'Blog', to: '/blog' },
   { label: 'İletişim', id: 'contact' },
 ];
 
@@ -243,16 +246,8 @@ const Home = () => {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
 
-  useEffect(() => {
-    document.title = 'Marka World | Tokat — Taksitli Marka Alışverişi';
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute(
-        'content',
-        'Marka World Tokat: Mağazadan taksitli marka ürün alışverişi, müşteri limit yönetimi ve ödeme takibi. Ürünleri keşfedin, bilgi alın veya müşteri girişi yapın.'
-      );
-    }
-  }, []);
+  const homeSeo = SEO_PAGES.home;
+  const homeJsonLd = buildHomeJsonLd();
 
   const handleMenu = (event) => setAnchorEl(event.currentTarget);
   const handleClose = () => setAnchorEl(null);
@@ -368,20 +363,30 @@ const Home = () => {
   };
 
   const renderNavLinks = (asMenu = false) =>
-    NAV_ITEMS.map((item) =>
-      asMenu ? (
+    NAV_ITEMS.map((item) => {
+      const key = item.to || item.id;
+      const handleClick = () => {
+        if (item.to) {
+          navigate(item.to);
+          handleClose();
+          return;
+        }
+        scrollToSection(item.id);
+      };
+
+      return asMenu ? (
         <MenuItem
-          key={item.id}
-          onClick={() => scrollToSection(item.id)}
+          key={key}
+          onClick={handleClick}
           sx={{ py: 2, fontSize: '1.05rem', fontWeight: 500 }}
         >
           {item.label}
         </MenuItem>
       ) : (
         <Button
-          key={item.id}
+          key={key}
           color="inherit"
-          onClick={() => scrollToSection(item.id)}
+          onClick={handleClick}
           sx={{
             fontSize: '0.95rem',
             fontWeight: 500,
@@ -392,13 +397,21 @@ const Home = () => {
         >
           {item.label}
         </Button>
-      )
-    );
+      );
+    });
 
   return (
-    <Box sx={{ bgcolor: 'white' }}>
+    <Box sx={{ bgcolor: 'white' }} component="div">
+      <SeoHead
+        title={homeSeo.title}
+        description={homeSeo.description}
+        canonicalPath={homeSeo.path}
+        robots={homeSeo.robots}
+        jsonLd={homeJsonLd}
+      />
       <AppBar
         position="fixed"
+        component="header"
         elevation={0}
         sx={{
           bgcolor: navScrolled ? alpha(DARK, 0.92) : alpha(DARK, 0.85),
@@ -408,6 +421,8 @@ const Home = () => {
         }}
       >
         <Toolbar
+          component="nav"
+          aria-label="Ana menü"
           sx={{
             justifyContent: 'space-between',
             minHeight: { xs: 64, md: 80 },
@@ -418,18 +433,25 @@ const Home = () => {
           }}
         >
           <Box
-            component="img"
-            src={LOGO_SRC}
-            alt="Marka World Logo"
-            sx={{
-              height: { xs: 38, md: 48 },
-              width: 'auto',
-              objectFit: 'contain',
-              filter: 'brightness(0) invert(1)',
-              cursor: 'pointer',
-            }}
-            onClick={() => navigate('/')}
-          />
+            component={RouterLink}
+            to="/"
+            aria-label="Marka World anasayfa"
+            sx={{ display: 'inline-flex', lineHeight: 0 }}
+          >
+            <Box
+              component="img"
+              src={LOGO_SRC}
+              alt="Marka World"
+              width={180}
+              height={31}
+              sx={{
+                height: { xs: 38, md: 48 },
+                width: 'auto',
+                objectFit: 'contain',
+                filter: 'brightness(0) invert(1)',
+              }}
+            />
+          </Box>
 
           {isMobile ? (
             <>
@@ -486,6 +508,7 @@ const Home = () => {
       </AppBar>
       <Toolbar sx={{ minHeight: { xs: 64, md: 80 } }} />
 
+      <Box component="main">
       {/* HERO */}
       <HeroSection component="section" aria-label="Giriş">
         <PageContainer sx={{ position: 'relative', zIndex: 1 }}>
@@ -1294,6 +1317,8 @@ const Home = () => {
         </PageContainer>
       </Box>
 
+      </Box>{/* /main */}
+
       {/* FOOTER */}
       <Box component="footer" sx={{ bgcolor: DARK, color: 'white', py: { xs: 8, md: 10 } }}>
         <PageContainer>
@@ -1302,7 +1327,9 @@ const Home = () => {
               <Box
                 component="img"
                 src={LOGO_SRC}
-                alt="Marka World Logo"
+                alt="Marka World"
+                width={180}
+                height={31}
                 sx={{ height: { xs: 44, md: 52 }, width: 'auto', mb: 3, filter: 'brightness(0) invert(1)' }}
               />
               <Typography sx={{ color: alpha('#fff', 0.5), fontSize: { xs: '0.95rem', md: '1rem' }, lineHeight: 1.7, mb: 3, maxWidth: 320 }}>
@@ -1321,16 +1348,27 @@ const Home = () => {
                 Bağlantılar
               </Typography>
               <Stack spacing={2}>
-                {NAV_ITEMS.map((item) => (
-                  <MuiLink
-                    key={item.id}
-                    component="button"
-                    onClick={() => scrollToSection(item.id)}
-                    sx={{ color: alpha('#fff', 0.6), textAlign: 'left', fontSize: '0.95rem', '&:hover': { color: ACCENT } }}
-                  >
-                    {item.label}
-                  </MuiLink>
-                ))}
+                {NAV_ITEMS.map((item) =>
+                  item.to ? (
+                    <MuiLink
+                      key={item.to}
+                      component={RouterLink}
+                      to={item.to}
+                      sx={{ color: alpha('#fff', 0.6), fontSize: '0.95rem', '&:hover': { color: ACCENT } }}
+                    >
+                      {item.label}
+                    </MuiLink>
+                  ) : (
+                    <MuiLink
+                      key={item.id}
+                      component="button"
+                      onClick={() => scrollToSection(item.id)}
+                      sx={{ color: alpha('#fff', 0.6), textAlign: 'left', fontSize: '0.95rem', '&:hover': { color: ACCENT } }}
+                    >
+                      {item.label}
+                    </MuiLink>
+                  )
+                )}
                 <MuiLink component={RouterLink} to="/register" sx={{ color: alpha('#fff', 0.6), fontSize: '0.95rem', '&:hover': { color: ACCENT } }}>
                   Üyelik Başvurusu
                 </MuiLink>

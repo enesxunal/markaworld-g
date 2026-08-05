@@ -31,6 +31,9 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import Terms from './pages/Terms';
 import KVKK from './pages/KVKK';
 import Unsubscribe from './pages/Unsubscribe';
+import NotFound from './pages/NotFound';
+import Blog from './pages/Blog';
+import BlogDetail from './pages/BlogDetail';
 
 function App() {
   return (
@@ -41,6 +44,8 @@ function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogDetail />} />
             <Route
               path="/admin/login"
               element={
@@ -103,8 +108,8 @@ function App() {
               <Route path="*" element={<Navigate to="/customer/profile" replace />} />
             </Route>
 
-            {/* Fallback Route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* 404 — soft-404 anasayfa yönlendirmesi kaldırıldı; HTTP status nginx tarafında ayrı */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
       </LocalizationProvider>

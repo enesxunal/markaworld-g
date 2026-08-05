@@ -1,26 +1,36 @@
 import React from 'react';
 import { Container, Typography, Box, Paper } from '@mui/material';
 import PublicLayout from '../components/PublicLayout';
+import SeoHead from '../components/SeoHead';
+import { SEO_PAGES } from '../seo/siteConfig';
 
 const KVKK = () => {
+  const seo = SEO_PAGES.kvkk;
+
   return (
     <PublicLayout>
-      <Container maxWidth="md">
+      <SeoHead
+        title={seo.title}
+        description={seo.description}
+        canonicalPath={seo.path}
+        robots={seo.robots}
+      />
+      <Container maxWidth="md" component="main">
         <Box sx={{ py: 4 }}>
           <Paper elevation={3} sx={{ p: 4 }}>
             <Typography variant="h4" component="h1" gutterBottom align="center">
               KVKK Aydınlatma Metni
             </Typography>
             <Typography variant="body1" paragraph>
-              6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, Marka World olarak kişisel verilerinizin işlenmesi hakkında sizi bilgilendirmek isteriz.
+              6698 sayılı Kişisel Verilerin Korunması Kanunu (&quot;KVKK&quot;) uyarınca, Marka World olarak kişisel verilerinizin işlenmesi hakkında sizi bilgilendirmek isteriz.
             </Typography>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" component="h2" gutterBottom>
               1. Veri Sorumlusu
             </Typography>
             <Typography variant="body1" paragraph>
               Marka World, kişisel verilerinizin işlenmesi konusunda veri sorumlusu olarak hareket etmektedir.
             </Typography>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" component="h2" gutterBottom>
               2. Kişisel Verilerin İşlenme Amaçları
             </Typography>
             <Typography variant="body1" paragraph>
@@ -30,17 +40,17 @@ const KVKK = () => {
               • İş süreçlerinin yürütülmesi
               • Güvenliğin sağlanması
             </Typography>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" component="h2" gutterBottom>
               3. Kişisel Verilerin Aktarımı
             </Typography>
             <Typography variant="body1" paragraph>
               Kişisel verileriniz, yasal zorunluluklar ve hizmet gereklilikleri doğrultusunda üçüncü kişilerle paylaşılabilir.
             </Typography>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" component="h2" gutterBottom>
               4. Kişisel Veri Sahibinin Hakları
             </Typography>
             <Typography variant="body1" paragraph>
-              KVKK'nın 11. maddesi uyarınca sahip olduğunuz haklar:
+              KVKK&apos;nın 11. maddesi uyarınca sahip olduğunuz haklar:
               • Kişisel verilerinizin işlenip işlenmediğini öğrenme
               • Kişisel verileriniz işlenmişse bilgi talep etme
               • İşlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme
@@ -48,7 +58,7 @@ const KVKK = () => {
               • Eksik veya yanlış işlenmişse düzeltilmesini isteme
               • Silinmesini veya yok edilmesini isteme
             </Typography>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" component="h2" gutterBottom>
               5. İletişim
             </Typography>
             <Typography variant="body1" paragraph>
@@ -61,4 +71,4 @@ const KVKK = () => {
   );
 };
 
-export default KVKK; 
+export default KVKK;

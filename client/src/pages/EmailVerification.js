@@ -23,6 +23,8 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { customerAPI } from '../services/api';
+import SeoHead from '../components/SeoHead';
+import { SEO_PAGES } from '../seo/siteConfig';
 
 const steps = ['E-posta Onayı', 'Sözleşme Onayı', 'Hesap Aktif'];
 
@@ -250,19 +252,33 @@ const EmailVerification = () => {
     }
   };
 
+  const verificationHead = (
+    <SeoHead
+      title={SEO_PAGES.emailVerification.title}
+      description={SEO_PAGES.emailVerification.description}
+      robots={SEO_PAGES.emailVerification.robots}
+      noCanonical
+    />
+  );
+
   if (loading && activeStep === 0 && !error) {
     return (
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
-          {renderStepContent()}
-        </Paper>
-      </Container>
+      <>
+        {verificationHead}
+        <Container maxWidth="md" sx={{ py: 4 }}>
+          <Paper elevation={3} sx={{ p: 4 }}>
+            {renderStepContent()}
+          </Paper>
+        </Container>
+      </>
     );
   }
 
   if (error && activeStep === 0) {
     return (
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <>
+        {verificationHead}
+        <Container maxWidth="md" sx={{ py: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Box textAlign="center">
             <ErrorIcon color="error" sx={{ fontSize: 80, mb: 2 }} />
@@ -300,11 +316,14 @@ const EmailVerification = () => {
           </Box>
         </Paper>
       </Container>
+      </>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
+    <>
+      {verificationHead}
+      <Container maxWidth="md" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
         <Typography variant="h4" gutterBottom textAlign="center" sx={{ mb: 4 }}>
           Hesap Onayı — Marka World
@@ -321,6 +340,7 @@ const EmailVerification = () => {
         {renderStepContent()}
       </Paper>
     </Container>
+    </>
   );
 };
 

@@ -1,4 +1,13 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /customer/
+Disallow: /customer-login
+Disallow: /register
+Disallow: /customer-register
+Disallow: /verify-email/
+Disallow: /contract-approve/
+Disallow: /contracts/
+Disallow: /unsubscribe
 
 Sitemap: https://www.markaworld.com.tr/sitemap.xml
