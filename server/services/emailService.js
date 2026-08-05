@@ -3,6 +3,13 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const { db } = require('../database/init');
+const {
+  isAuthMailError,
+  isRateLimitError,
+  shouldStopFallback,
+  shouldAbortBulk,
+  wrapMailError
+} = require('../utils/emailSendPolicy');
 
 function envTrim(key) {
   const value = process.env[key];
@@ -18,9 +25,11 @@ function getFromAddress() {
 }
 
 let cachedSmtpTransporter = null;
+let cachedGmailTransporter = null;
 
 function resetEmailTransporter() {
   cachedSmtpTransporter = null;
+  cachedGmailTransporter = null;
 }
 
 function hasGmailOAuth() {
@@ -66,7 +75,17 @@ function getGmailRedirectUri() {
   return envTrim('GMAIL_REDIRECT_URI') || 'urn:ietf:wg:oauth:2.0:oob';
 }
 
+function sameGmailAccountForSmtpAndOauth() {
+  const smtpUser = envTrim('EMAIL_USER').toLowerCase();
+  const gmailUser = envTrim('GMAIL_USER').toLowerCase();
+  return Boolean(smtpUser && gmailUser && smtpUser === gmailUser);
+}
+
 async function createGmailTransporter() {
+  if (cachedGmailTransporter) {
+    return cachedGmailTransporter;
+  }
+
   const { google } = require('googleapis');
   const oAuth2Client = new google.auth.OAuth2(
     envTrim('GMAIL_CLIENT_ID'),
@@ -77,7 +96,7 @@ async function createGmailTransporter() {
 
   const accessToken = await oAuth2Client.getAccessToken();
 
-  return nodemailer.createTransport({
+  const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       type: 'OAuth2',
@@ -88,35 +107,49 @@ async function createGmailTransporter() {
       accessToken: accessToken.token
     }
   });
+  cachedGmailTransporter = transporter;
+  console.log('✅ E-posta: Gmail OAuth hazır (%s)', envTrim('GMAIL_USER'));
+  return transporter;
 }
 
 async function createSmtpTransporter() {
   if (cachedSmtpTransporter) {
     return cachedSmtpTransporter;
   }
+  // verify() her oluşturuluşta ekstra login denemesi yapar → rate-limit riski.
+  // Gönderim anında auth hatası zaten yakalanır.
   const transporter = nodemailer.createTransport({
     host: envTrim('EMAIL_HOST'),
     port: parseInt(envTrim('EMAIL_PORT') || '465', 10),
     secure: envTrim('EMAIL_SECURE') === 'true',
+    pool: true,
+    maxConnections: 1,
+    maxMessages: 50,
     auth: {
       user: envTrim('EMAIL_USER'),
       pass: envTrim('EMAIL_PASS')
     }
   });
-  await transporter.verify();
   cachedSmtpTransporter = transporter;
   console.log('✅ E-posta: SMTP hazır (%s)', envTrim('EMAIL_HOST'));
   return transporter;
 }
 
-async function createTransporter({ prefer } = {}) {
+/**
+ * Transporter oluştur.
+ * allowFallback=false: yalnız tercih edilen sürücü.
+ * Auth/rate-limit hatalarında asla diğer sürücüye düşme (özellikle aynı Gmail hesabı).
+ */
+async function createTransporter({ prefer, allowFallback = true } = {}) {
   const driver = prefer || getEmailDriver();
-  const tryOrder =
-    driver === 'smtp'
-      ? ['smtp', 'gmail']
-      : driver === 'gmail'
-        ? ['gmail', 'smtp']
-        : [];
+  let tryOrder = [];
+  if (driver === 'smtp') tryOrder = allowFallback ? ['smtp', 'gmail'] : ['smtp'];
+  else if (driver === 'gmail') tryOrder = allowFallback ? ['gmail', 'smtp'] : ['gmail'];
+
+  // Aynı Gmail hesabında SMTP↔OAuth fallback ek login denemesi üretir
+  if (allowFallback && sameGmailAccountForSmtpAndOauth()) {
+    tryOrder = driver ? [driver] : tryOrder.slice(0, 1);
+  }
 
   let lastError;
   for (const mode of tryOrder) {
@@ -125,14 +158,15 @@ async function createTransporter({ prefer } = {}) {
         return await createSmtpTransporter();
       }
       if (mode === 'gmail' && hasGmailOAuth()) {
-        const transporter = await createGmailTransporter();
-        console.log('✅ E-posta: Gmail OAuth hazır (%s)', envTrim('GMAIL_USER'));
-        return transporter;
+        return await createGmailTransporter();
       }
     } catch (err) {
       lastError = err;
       resetEmailTransporter();
       console.error(`❌ ${mode.toUpperCase()} hatası:`, err.message);
+      if (shouldStopFallback(err)) {
+        throw err;
+      }
     }
   }
 
@@ -142,54 +176,22 @@ async function createTransporter({ prefer } = {}) {
   );
 }
 
-function isAuthMailError(err) {
-  const msg = (err && err.message) || '';
-  return /invalid_grant|EAUTH|authentication|unauthorized|expired|Invalid login/i.test(msg);
-}
-
-function isRateLimitError(err) {
-  const msg = (err && err.message) || '';
-  return /454|Too many login attempts|rate.?limit|try again later/i.test(msg);
-}
-
 async function sendMail(to, subject, html) {
-  let lastError;
-  const drivers = [];
-  const primary = getEmailDriver();
-  if (primary === 'smtp') drivers.push('smtp', 'gmail');
-  else if (primary === 'gmail') drivers.push('gmail', 'smtp');
-  else drivers.push('gmail', 'smtp');
-
-  for (const driver of drivers) {
-    try {
-      const transporter = await createTransporter({ prefer: driver });
-      return await transporter.sendMail({
-        from: getFromAddress(),
-        to,
-        subject,
-        html
-      });
-    } catch (err) {
-      lastError = err;
-      console.error(`❌ Mail gönderme hatası (${driver}):`, err.message);
-
-      // Google rate limit: tekrar denemek durumu kötüleştirir
-      if (isRateLimitError(err)) {
-        throw new Error(
-          'Google geçici olarak mail gönderimini kısıtladı (çok fazla giriş denemesi). ' +
-            '30–60 dakika bekleyip tekrar deneyin.'
-        );
-      }
-
-      resetEmailTransporter();
-      if (!isAuthMailError(err)) break;
-    }
+  try {
+    // Tek transporter + en fazla bir fallback (createTransporter içinde).
+    // Dışarıda smtp→gmail döngüsü yok → nested login yok.
+    const transporter = await createTransporter({ allowFallback: true });
+    return await transporter.sendMail({
+      from: getFromAddress(),
+      to,
+      subject,
+      html
+    });
+  } catch (err) {
+    console.error('❌ Mail gönderme hatası:', err.message);
+    resetEmailTransporter();
+    throw wrapMailError(err);
   }
-
-  const hint = /invalid_grant/i.test((lastError && lastError.message) || '')
-    ? ' Gmail token süresi dolmuş. Sunucuda: node get_gmail_token.js veya bash scripts/set-smtp-env.sh ile hosting mail kurun.'
-    : '';
-  throw new Error(`${(lastError && lastError.message) || 'Mail gönderilemedi'}.${hint}`);
 }
 
 function replacePlaceholders(template, vars) {
@@ -376,6 +378,7 @@ async function sendBulkEmail(recipients, subject, messageContent, options = {}) 
   let totalFailed = 0;
   const errors = [];
   const unique = [...new Set(recipients.map((e) => String(e).trim().toLowerCase()).filter(Boolean))];
+  let aborted = false;
 
   for (const email of unique) {
     try {
@@ -386,10 +389,29 @@ async function sendBulkEmail(recipients, subject, messageContent, options = {}) 
     } catch (err) {
       totalFailed += 1;
       errors.push({ email, error: err.message });
+      // Auth / rate-limit: kalan alıcılar için tekrar login deneme
+      if (shouldAbortBulk(err)) {
+        aborted = true;
+        const remaining = unique.length - totalSent - totalFailed;
+        if (remaining > 0) {
+          totalFailed += remaining;
+          errors.push({
+            email: '*',
+            error: 'Kimlik doğrulama/rate-limit hatası nedeniyle kalan gönderimler iptal edildi'
+          });
+        }
+        break;
+      }
     }
   }
 
-  return { totalSent, totalFailed, errors, totalRecipients: unique.length };
+  return {
+    totalSent,
+    totalFailed,
+    errors,
+    totalRecipients: unique.length,
+    aborted
+  };
 }
 
 module.exports = {
@@ -406,5 +428,7 @@ module.exports = {
   sendTemplatedEmail,
   createTransporter,
   getFrontendUrl,
+  isAuthMailError,
+  isRateLimitError,
   FRONTEND_URL: getFrontendUrl()
 };
