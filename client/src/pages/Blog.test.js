@@ -42,15 +42,15 @@ function renderBlogRoutes(initialPath) {
 }
 
 describe('blog content inventory', () => {
-  test('yalnız 8 yayınlanmış yazı vardır', () => {
-    expect(PUBLISHED_BLOG_POSTS).toHaveLength(8);
-    expect(getAllPublishedPosts()).toHaveLength(8);
+  test('14 yayınlanmış yazı vardır', () => {
+    expect(PUBLISHED_BLOG_POSTS).toHaveLength(14);
+    expect(getAllPublishedPosts()).toHaveLength(14);
     expect(DRAFT_CONTENT_CALENDAR).toHaveLength(20);
   });
 
   test('her yayın slug benzersiz ve alanlar dolu', () => {
     const slugs = PUBLISHED_BLOG_POSTS.map((p) => p.slug);
-    expect(new Set(slugs).size).toBe(8);
+    expect(new Set(slugs).size).toBe(14);
     PUBLISHED_BLOG_POSTS.forEach((post) => {
       expect(post.title).toBeTruthy();
       expect(post.description).toBeTruthy();
@@ -154,7 +154,7 @@ describe('buildBlogPostingJsonLd', () => {
 describe('sitemap blog URLs', () => {
   const publicDir = path.join(__dirname, '../../public');
 
-  test('sitemap 8 blog yazısı + /blog içerir, private URL yoktur', () => {
+  test('sitemap tüm yayınlanmış blog yazılarını + /blog içerir, private URL yoktur', () => {
     const xml = fs.readFileSync(path.join(publicDir, 'sitemap.xml'), 'utf8');
     expect(xml).toMatch(/<\?xml version="1\.0"/);
     expect(xml).toContain('<loc>https://www.markaworld.com.tr/blog</loc>');
@@ -174,12 +174,12 @@ describe('sitemap blog URLs', () => {
   });
 });
 
-describe('blog list empty category', () => {
+describe('blog category filtering', () => {
   beforeEach(() => {
     document.head.innerHTML = '';
   });
 
-  test('yazısız kategori boş durum gösterir', async () => {
+  test('alışveriş rehberi kategorisi yayınlanmış yazıları gösterir', async () => {
     render(
       <MemoryRouter initialEntries={['/blog?kategori=alisveris-rehberi']}>
         <Routes>
@@ -188,7 +188,7 @@ describe('blog list empty category', () => {
       </MemoryRouter>
     );
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Blog');
-    expect(await screen.findByText(/Bu kategoride henüz yayınlanmış yazı yok/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Tüm yazıları göster/i })).toBeInTheDocument();
+    expect(await screen.findByText(/Pull&Bear Stilini Sevenler/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Bu kategoride henüz yayınlanmış yazı yok/i)).not.toBeInTheDocument();
   });
 });

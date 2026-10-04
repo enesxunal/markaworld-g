@@ -55,9 +55,9 @@ export const PUBLIC_INDEXABLE_PATHS = [
 export const SEO_PAGES = {
   home: {
     path: '/',
-    title: 'Marka World | Tokat’ta Taksitli Marka Alışverişi',
+    title: 'Marka World Tokat | Giyim Mağazası ve Taksitli Alışveriş',
     description:
-      'Tokat’taki Marka World mağazasında marka ürünlerini inceleyin, taksitli alışveriş seçenekleri hakkında bilgi alın ve ödemelerinizi müşteri panelinden takip edin.',
+      'Tokat’ta kadın, erkek ve çocuk giyim için Marka World mağazasını keşfedin. Marka ürünlerini mağazada inceleyin, taksit seçenekleri ve ödeme takibi hakkında bilgi alın.',
     robots: 'index, follow',
   },
   blog: {
@@ -161,9 +161,10 @@ export function buildHomeJsonLd() {
         inLanguage: 'tr-TR',
       },
       {
-        '@type': 'Store',
+        '@type': 'ClothingStore',
         '@id': storeId,
         name: BUSINESS.name,
+        description: 'Tokat’ta kadın, erkek ve çocuk giyim ürünlerini mağazada inceleyebileceğiniz Marka World giyim mağazası.',
         url: `${SITE_ORIGIN}/`,
         logo: logoUrl,
         image: logoUrl,

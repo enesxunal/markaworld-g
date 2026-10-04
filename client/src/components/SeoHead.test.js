@@ -64,7 +64,7 @@ describe('SeoHead', () => {
     expect(parsed['@graph']).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ '@type': 'WebSite', name: 'Marka World' }),
-        expect.objectContaining({ '@type': 'Store', telephone: '+903565027899' }),
+        expect.objectContaining({ '@type': 'ClothingStore', telephone: '+903565027899' }),
       ])
     );
   });
@@ -132,8 +132,8 @@ describe('siteConfig', () => {
     expect(PUBLIC_INDEXABLE_PATHS).not.toEqual(expect.arrayContaining(['/admin', '/customer', '/register']));
   });
 
-  test('Store JSON-LD doğrulanmamış alanları içermez', () => {
-    const store = buildHomeJsonLd()['@graph'].find((n) => n['@type'] === 'Store');
+  test('ClothingStore JSON-LD doğrulanmamış alanları içermez', () => {
+    const store = buildHomeJsonLd()['@graph'].find((n) => n['@type'] === 'ClothingStore');
     expect(store.aggregateRating).toBeUndefined();
     expect(store.review).toBeUndefined();
     expect(store.priceRange).toBeUndefined();

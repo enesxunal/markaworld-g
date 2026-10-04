@@ -9,6 +9,12 @@ import postCocuk from './blog/tokatta-cocuk-giyim-alirken-nelere-dikkat-edilmeli
 import postButce from './blog/taksitli-alisveriste-butce-plani';
 import postPanel from './blog/musteri-panelinden-odeme-takibi';
 import postMagazaRehberi from './blog/marka-world-tokat-magaza-rehberi';
+import postZaraStyle from './blog/zara-stilini-sevenler-icin-tokatta-giyim-alternatifleri';
+import postMangoStyle from './blog/mango-stilini-sevenler-icin-tokatta-kadin-giyim';
+import postBershkaStyle from './blog/bershka-stilini-sevenler-icin-tokatta-genc-giyim';
+import postPullBearStyle from './blog/pull-and-bear-stilini-sevenler-icin-tokatta-gunluk-giyim';
+import postStradivariusStyle from './blog/stradivarius-stilini-sevenler-icin-tokatta-kadin-giyim';
+import postHmStyle from './blog/hm-stilini-sevenler-icin-tokatta-temel-giyim';
 
 /** Published posts only — drafts live in DRAFT_CONTENT_CALENDAR. */
 export const PUBLISHED_BLOG_POSTS = [
@@ -20,6 +26,12 @@ export const PUBLISHED_BLOG_POSTS = [
   postButce,
   postPanel,
   postMagazaRehberi,
+  postZaraStyle,
+  postMangoStyle,
+  postBershkaStyle,
+  postPullBearStyle,
+  postStradivariusStyle,
+  postHmStyle,
 ];
 
 const bySlug = Object.fromEntries(PUBLISHED_BLOG_POSTS.map((p) => [p.slug, p]));

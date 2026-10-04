@@ -724,10 +724,10 @@ const Home = () => {
                 mb: 2,
               }}
             >
-              Ürün Kategorileri
+              Tokat’ta Kadın, Erkek ve Çocuk Giyim
             </Typography>
             <Typography sx={{ color: alpha('#fff', 0.55), fontSize: { xs: '1rem', md: '1.1rem' }, maxWidth: 560, lineHeight: 1.7 }}>
-              Ürünler mağazamızda satışa sunulur. Online sepet veya kargo süreci bulunmaz.
+              Tokat’taki giyim mağazamızda kadın, erkek ve çocuk kategorilerini yerinde inceleyebilirsiniz. Online sepet veya kargo süreci bulunmaz.
             </Typography>
           </Box>
 
