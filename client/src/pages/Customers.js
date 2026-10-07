@@ -48,7 +48,8 @@ import {
   Email as EmailIcon,
   CreditCard as CreditCardIcon,
   AddShoppingCart as AddShoppingCartIcon,
-  Send as SendIcon
+  Send as SendIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { customerAPI, adminAPI } from '../services/api';
 import PageHeader from '../components/PageHeader';
@@ -185,6 +186,16 @@ function Customers() {
     }
   };
 
+  const handleDeleteCustomer = async (customer) => {
+    if (!window.confirm(`${customer.name} kaydı silinsin mi? Bu işlem geri alınamaz.`)) return;
+    try {
+      await customerAPI.delete(customer.id);
+      await loadCustomers();
+    } catch (error) {
+      alert('Hata: ' + (error.response?.data?.error || 'Müşteri silinemedi'));
+    }
+  };
+
   const needsVerification = (customer) =>
     customer.status !== 'active' && !customer.email_verified;
 
@@ -278,6 +289,14 @@ function Customers() {
             >
               <AddShoppingCartIcon />
             </IconButton>
+            <IconButton
+              size="small"
+              color="error"
+              title="Müşteriyi sil"
+              onClick={() => handleDeleteCustomer(customer)}
+            >
+              <DeleteIcon />
+            </IconButton>
             {needsVerification(customer) && (
               <IconButton
                 size="small"
@@ -341,6 +360,14 @@ function Customers() {
                     onClick={() => navigate('/admin/sales/new', { state: { selectedCustomer: customer } })}
                   >
                     <AddShoppingCartIcon />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    color="error"
+                    title="Müşteriyi sil"
+                    onClick={() => handleDeleteCustomer(customer)}
+                  >
+                    <DeleteIcon />
                   </IconButton>
                   {needsVerification(customer) && (
                     <IconButton

@@ -237,21 +237,28 @@ router.post('/register', [
   const { name, tc_no, phone, email, password, birth_date, address } = req.body;
 
   try {
-    // Email kontrolü
+    // TC ve email benzersizlik kontrolü
     const existingCustomer = await new Promise((resolve, reject) => {
-      db.get('SELECT * FROM customers WHERE email = ?', [email], (err, row) => {
-        if (err) {
-          console.error('Email kontrolü hatası:', err.message);
-          reject(err);
+      db.get(
+        'SELECT id, tc_no, email FROM customers WHERE tc_no = ? OR lower(email) = lower(?) LIMIT 1',
+        [tc_no, email],
+        (err, row) => {
+          if (err) {
+            console.error('Müşteri benzersizlik kontrolü hatası:', err.message);
+            reject(err);
+          } else {
+            resolve(row);
+          }
         }
-        else resolve(row);
-      });
+      );
     });
 
     if (existingCustomer) {
       return res.status(400).json({
         success: false,
-        error: 'Bu email adresi zaten kayıtlı'
+        error: existingCustomer.tc_no === tc_no
+          ? 'Bu TC Kimlik No ile kayıtlı müşteri zaten var'
+          : 'Bu email adresi zaten kayıtlı'
       });
     }
 
